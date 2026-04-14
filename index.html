@@ -1164,9 +1164,9 @@ Restituisci SOLO il JSON, niente altro.`,
     importedMealData = parsed;
     statusText.textContent = '✓ Scheda letta con successo';
     // Nascondi il box di upload e mostra solo l'anteprima
-    const dropEl = document.getElementById(isW ? 'welcomeImportDrop' : 'importDrop');
+    const dropEl = document.getElementById(isWelcome ? 'welcomeImportDrop' : 'importDrop');
     if (dropEl) dropEl.style.display = 'none';
-    showImportPreview(parsed, previewContentId, previewId);
+    showImportPreview(parsed, previewContentId);
 
   } catch(err) {
     statusText.textContent = '✗ ' + (err.message || 'Errore durante l\'analisi');
