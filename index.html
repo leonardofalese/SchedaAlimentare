@@ -199,6 +199,29 @@ body{font-family:var(--font);color:var(--text)}
 .meal-card:nth-child(4){animation-delay:.12s}
 .sync-indicator{width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;margin-left:6px;opacity:0;transition:opacity .3s}
 .sync-indicator.syncing{opacity:1;animation:pulse 1s ease-in-out infinite}
+
+/* IMPORT */
+.import-drop{border:2px dashed var(--border2);border-radius:var(--r);padding:32px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--card);position:relative}
+.import-drop:hover,.import-drop.dragover{border-color:var(--green);background:var(--green-dim)}
+.import-drop input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.import-drop-icon{font-size:32px;margin-bottom:10px}
+.import-drop-title{font-size:14px;font-weight:700;margin-bottom:4px}
+.import-drop-sub{font-size:12px;color:var(--text-mid)}
+.import-status{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-top:12px;display:none}
+.import-status.show{display:block}
+.import-status-label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-soft);margin-bottom:8px}
+.import-spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite;margin-right:8px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.import-preview{margin-top:12px;display:none}
+.import-preview.show{display:block}
+.import-day-preview{background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:8px}
+.import-day-name{font-size:12px;font-weight:700;color:var(--green);margin-bottom:8px;font-family:var(--mono)}
+.import-meal-preview{font-size:12px;color:var(--text-mid);padding:4px 0;border-bottom:1px solid var(--border)}
+.import-meal-preview:last-child{border-bottom:none}
+.import-meal-preview strong{color:var(--text);font-size:11px}
+.import-actions{display:flex;gap:8px;margin-top:12px}
+.import-confirm-btn{flex:1;background:var(--green);color:#0a0a0a;border:none;border-radius:40px;padding:12px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer}
+.import-cancel-btn{flex:1;background:transparent;border:1px solid var(--border2);border-radius:40px;padding:12px;font-family:var(--font);font-size:13px;font-weight:600;color:var(--text-mid);cursor:pointer}
 </style>
 </head>
 <body>
@@ -340,6 +363,27 @@ body{font-family:var(--font);color:var(--text)}
           <div id="shopEditorContainer"></div>
           <button class="add-food-btn" style="margin-top:12px" onclick="addShopCategory()">+ Nuova categoria</button>
           <button class="save-btn" style="margin-top:8px" onclick="saveShop()">Salva lista spesa</button>
+        </div>
+        <div class="settings-section">
+          <div class="settings-section-title">Importa scheda da file</div>
+          <div style="font-size:12px;color:var(--text-mid);margin-bottom:12px">Carica un PDF, immagine (JPG/PNG) o testo con la tua scheda alimentare. Claude la leggerà e importerà i pasti automaticamente.</div>
+          <div class="import-drop" id="importDrop" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+            <input type="file" id="importFile" accept=".pdf,.jpg,.jpeg,.png,.txt" onchange="handleFileSelect(event)">
+            <div class="import-drop-icon">📄</div>
+            <div class="import-drop-title">Trascina il file qui</div>
+            <div class="import-drop-sub">oppure tocca per scegliere · PDF, JPG, PNG, TXT</div>
+          </div>
+          <div class="import-status" id="importStatus">
+            <div><span class="import-spinner" id="importSpinner"></span><span id="importStatusText">Analisi in corso…</span></div>
+          </div>
+          <div class="import-preview" id="importPreview">
+            <div class="import-status-label" style="margin-top:12px">Anteprima scheda rilevata</div>
+            <div id="importPreviewContent"></div>
+            <div class="import-actions">
+              <button class="import-cancel-btn" onclick="cancelImport()">Annulla</button>
+              <button class="import-confirm-btn" onclick="confirmImport()">✓ Importa</button>
+            </div>
+          </div>
         </div>
         <div style="height:20px"></div>
       </div>
@@ -729,6 +773,159 @@ function switchView(view,btn) {
   if(view==='timer')renderTimer();
   else if(timerInt){clearInterval(timerInt);timerInt=null;}
   if(view==='settings'){renderSettingsDayTabs();renderMealEditor();renderShopEditor();}
+}
+
+// ── IMPORT SCHEDA ─────────────────────────────────────────
+let importedMealData = null;
+
+function handleDragOver(e) { e.preventDefault(); document.getElementById('importDrop').classList.add('dragover'); }
+function handleDragLeave(e) { document.getElementById('importDrop').classList.remove('dragover'); }
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('importDrop').classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) processImportFile(file);
+}
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) processImportFile(file);
+}
+
+async function processImportFile(file) {
+  const status = document.getElementById('importStatus');
+  const preview = document.getElementById('importPreview');
+  const statusText = document.getElementById('importStatusText');
+  preview.classList.remove('show');
+  status.classList.add('show');
+  statusText.textContent = 'Lettura file…';
+
+  try {
+    const { base64, mediaType } = await fileToBase64(file);
+    statusText.textContent = 'Claude sta analizzando la scheda…';
+
+    const messages = buildImportMessages(base64, mediaType, file.type);
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        system: `Sei un assistente che estrae schede alimentari da file. 
+Analizza il contenuto e restituisci SOLO un JSON valido (senza markdown, senza backtick) con questa struttura esatta:
+{
+  "times": { "colazione": "HH:MM", "pranzo": "HH:MM", "spuntini": "HH:MM", "cena": "HH:MM" },
+  "days": {
+    "0": { "colazione": ["alimento1", "alimento2"], "pranzo": [...], "spuntini": [...], "cena": [...] },
+    "1": { ... },
+    "2": { ... },
+    "3": { ... },
+    "4": { ... },
+    "5": { ... },
+    "6": { ... }
+  }
+}
+I giorni vanno da 0 (Lunedì) a 6 (Domenica).
+Gli alimenti devono includere quantità es. "150g latte intero", "2 uova", "100g riso".
+Se un giorno non è specificato, usa "Giorno libero" per tutti i pasti.
+Se gli orari non sono specificati usa: colazione 07:30, pranzo 13:00, spuntini 16:30, cena 20:00.
+Restituisci SOLO il JSON, niente altro.`,
+        messages
+      })
+    });
+
+    if (!response.ok) throw new Error('Errore API Claude');
+    const data = await response.json();
+    const text = data.content.find(b => b.type === 'text')?.text || '';
+
+    let parsed;
+    try {
+      const clean = text.replace(/```json|```/g, '').trim();
+      parsed = JSON.parse(clean);
+    } catch(e) {
+      throw new Error('Non riesco a leggere la struttura della scheda. Prova con un file più chiaro.');
+    }
+
+    importedMealData = parsed;
+    statusText.textContent = '✓ Scheda letta con successo';
+    showImportPreview(parsed);
+
+  } catch(err) {
+    statusText.textContent = '✗ ' + (err.message || 'Errore durante l\'analisi');
+    document.getElementById('importSpinner').style.display = 'none';
+  }
+}
+
+function buildImportMessages(base64, mediaType, fileType) {
+  if (fileType.startsWith('image/')) {
+    return [{ role: 'user', content: [
+      { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+      { type: 'text', text: 'Estrai la scheda alimentare da questa immagine e restituisci il JSON.' }
+    ]}];
+  } else if (fileType === 'application/pdf') {
+    return [{ role: 'user', content: [
+      { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } },
+      { type: 'text', text: 'Estrai la scheda alimentare da questo PDF e restituisci il JSON.' }
+    ]}];
+  } else {
+    const text = atob(base64);
+    return [{ role: 'user', content: `Estrai la scheda alimentare da questo testo e restituisci il JSON:\n\n${text}` }];
+  }
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      const base64 = result.split(',')[1];
+      const mediaType = file.type || 'application/octet-stream';
+      resolve({ base64, mediaType });
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function showImportPreview(data) {
+  const preview = document.getElementById('importPreview');
+  const content = document.getElementById('importPreviewContent');
+  const giorni = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'];
+  const pasti = ['colazione','pranzo','spuntini','cena'];
+  const labels = {colazione:'Colazione',pranzo:'Pranzo',spuntini:'Spuntini',cena:'Cena'};
+
+  content.innerHTML = Object.keys(data.days || {}).slice(0,7).map(d => {
+    const day = data.days[d];
+    const righe = pasti.map(k => {
+      const foods = day[k] || [];
+      const preview = foods.slice(0,2).join(', ') + (foods.length > 2 ? `… +${foods.length-2}` : '');
+      return `<div class="import-meal-preview"><strong>${labels[k]}:</strong> ${preview || '—'}</div>`;
+    }).join('');
+    return `<div class="import-day-preview"><div class="import-day-name">${giorni[parseInt(d)]}</div>${righe}</div>`;
+  }).join('');
+
+  preview.classList.add('show');
+}
+
+function cancelImport() {
+  importedMealData = null;
+  document.getElementById('importPreview').classList.remove('show');
+  document.getElementById('importStatus').classList.remove('show');
+  document.getElementById('importFile').value = '';
+}
+
+function confirmImport() {
+  if (!importedMealData) return;
+  // Fix day keys as integers
+  const fixed = {};
+  Object.keys(importedMealData.days).forEach(k => { fixed[parseInt(k)] = importedMealData.days[k]; });
+  state.mealData.days = fixed;
+  if (importedMealData.times) state.mealData.times = importedMealData.times;
+  save();
+  renderMeals();
+  updateProgress();
+  renderMealEditor();
+  cancelImport();
+  showToast('Scheda importata! ✓');
 }
 </script>
 <script>
