@@ -209,9 +209,9 @@ body{font-family:var(--font);color:var(--text)}
 .welcome-sub{font-size:13px;color:var(--text-mid);margin-bottom:28px}
 .welcome-skip{background:transparent;border:none;font-family:var(--font);font-size:13px;color:var(--text-soft);cursor:pointer;text-decoration:underline;margin-top:12px;display:block;width:100%;text-align:center}
 /* PROFILE MODAL */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:flex-end;justify-content:center}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;display:flex;align-items:flex-end;justify-content:center}
 .modal-overlay.hidden{display:none}
-.modal-sheet{background:var(--card);border-radius:var(--r) var(--r) 0 0;padding:24px;width:100%;max-width:480px;border-top:1px solid var(--border2)}
+.modal-sheet{background:var(--card);border-radius:var(--r) var(--r) 0 0;padding:24px;width:100%;max-width:480px;border-top:1px solid var(--border2);max-height:85vh;overflow-y:auto}
 .modal-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 20px}
 .modal-title{font-size:18px;font-weight:800;margin-bottom:20px}
 .modal-field{margin-bottom:14px}
@@ -597,22 +597,26 @@ async function doRegister() {
 }
 
 async function doLogout() {
+  if (syncTimeout) clearTimeout(syncTimeout);
   await sb.auth.signOut();
   currentUser = null;
-  // Reset state
+  // Reset tutto lo state
   state = {
     meals: {},
     shop: {},
     mealData: JSON.parse(JSON.stringify(DEFAULT_MEALS)),
     shopData: JSON.parse(JSON.stringify(DEFAULT_SHOP))
   };
+  currentDay = today;
+  settingsDay = 0;
+  if (timerInt) { clearInterval(timerInt); timerInt = null; }
   document.getElementById('mainApp').classList.remove('visible');
   document.getElementById('profileModal').classList.add('hidden');
   document.getElementById('welcomeScreen').classList.add('hidden');
   document.getElementById('authScreen').classList.remove('hidden');
-  // Reset auth form
   document.getElementById('loginEmail').value = '';
   document.getElementById('loginPassword').value = '';
+  document.getElementById('authError').classList.remove('show');
 }
 
 // ── SUPABASE DATA SYNC ────────────────────────────────────
@@ -625,6 +629,13 @@ function hideSync() {
 
 async function loadFromCloud() {
   if (!currentUser) return;
+  // Reset state prima di caricare (evita dati residui di sessioni precedenti)
+  state = {
+    meals: {},
+    shop: {},
+    mealData: JSON.parse(JSON.stringify(DEFAULT_MEALS)),
+    shopData: JSON.parse(JSON.stringify(DEFAULT_SHOP))
+  };
   showSync();
   const {data, error} = await sb.from('user_data').select('data').eq('user_id', currentUser.id).single();
   hideSync();
