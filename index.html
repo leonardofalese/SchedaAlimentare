@@ -1020,80 +1020,17 @@ function cancelWelcomeImport() {
   document.getElementById('welcomeImportDrop').style.display = '';
 }
 
-
-// ── GENERA LISTA SPESA DA SCHEDA ─────────────────────────
-function generateShopFromMeals(mealData) {
-  const allFoods = {};
-  
-  Object.values(mealData.days).forEach(day => {
-    MEAL_KEYS.forEach(k => {
-      (day[k] || []).forEach(food => {
-        if (!food || food === 'Giorno libero' || food === 'Libero') return;
-        const p = parseFood(food);
-        const name = p.name.trim();
-        if (!name) return;
-        const key = name.toLowerCase();
-        if (!allFoods[key]) {
-          allFoods[key] = { name: name, qty: p.qty || '' };
-        }
-      });
-    });
-  });
-
-  // Raggruppa in categorie base
-  const proteine = ['tonno','salmone','pollo','manzo','macinato','bistecca','bresaola','uova','uovo','prosciutto','tacchino','merluzzo','sgombro'];
-  const carboidrati = ['pasta','riso','pane','avena','farro','orzo','cereali','biscotti','cracker','patate','fette','gallette'];
-  const latticini = ['latte','yogurt','greco','grana','parmigiano','mozzarella','ricotta','burro','formaggio'];
-  const verdure = ['zucchine','carote','spinaci','insalata','broccoli','pomodori','peperoni','melanzane','cipolla','aglio','verdure','funghi','cavolo','cetrioli','lattuga'];
-  const frutta = ['mela','pera','banana','arancia','kiwi','fragole','uva','ananas','mango','frutto','frutti','frutte','melone'];
-  const condimenti = ['olio','sale','pepe','miele','aceto','salsa','passata','pomodoro','dado','spezie','erbe','cacao','cioccolato','frutta secca','mandorle','noci','nocciole'];
-
-  const cats = {
-    'Proteine': [],
-    'Carboidrati & Cereali': [],
-    'Latticini': [],
-    'Verdure & Frutta': [],
-    'Condimenti & Altro': []
-  };
-
-  Object.values(allFoods).forEach(item => {
-    const nameLow = item.name.toLowerCase();
-    if (proteine.some(p => nameLow.includes(p))) {
-      cats['Proteine'].push(item);
-    } else if (carboidrati.some(p => nameLow.includes(p))) {
-      cats['Carboidrati & Cereali'].push(item);
-    } else if (latticini.some(p => nameLow.includes(p))) {
-      cats['Latticini'].push(item);
-    } else if (verdure.some(p => nameLow.includes(p)) || frutta.some(p => nameLow.includes(p))) {
-      cats['Verdure & Frutta'].push(item);
-    } else {
-      cats['Condimenti & Altro'].push(item);
-    }
-  });
-
-  return Object.entries(cats)
-    .filter(([,items]) => items.length > 0)
-    .map(([cat, items]) => ({
-      cat,
-      items: items.map(i => ({ name: i.name, qty: i.qty }))
-    }));
-}
-
 async function confirmWelcomeImport() {
   if (!importedMealData) return;
   const fixed = {};
   Object.keys(importedMealData.days).forEach(k => { fixed[parseInt(k)] = importedMealData.days[k]; });
   state.mealData.days = fixed;
   if (importedMealData.times) state.mealData.times = importedMealData.times;
-  const generatedShop = generateShopFromMeals(state.mealData);
-  if (generatedShop.length > 0) state.shopData = generatedShop;
-  importedMealData = null;
   save();
   renderMeals();
   updateProgress();
-  renderDayNav();
   document.getElementById('welcomeScreen').classList.add('hidden');
-  showToast('Scheda e lista spesa importate! ✓');
+  showToast('Scheda importata! ✓');
 }
 
 // ── PROFILE MODAL ─────────────────────────────────────────
@@ -1227,9 +1164,9 @@ Restituisci SOLO il JSON, niente altro.`,
     importedMealData = parsed;
     statusText.textContent = '✓ Scheda letta con successo';
     // Nascondi il box di upload e mostra solo l'anteprima
-    const dropEl = document.getElementById(isWelcome ? 'welcomeImportDrop' : 'importDrop');
+    const dropEl = document.getElementById(isW ? 'welcomeImportDrop' : 'importDrop');
     if (dropEl) dropEl.style.display = 'none';
-    showImportPreview(parsed, previewContentId);
+    showImportPreview(parsed, previewContentId, previewId);
 
   } catch(err) {
     statusText.textContent = '✗ ' + (err.message || 'Errore durante l\'analisi');
@@ -1299,14 +1236,17 @@ function cancelImport() {
 
 function confirmImport() {
   if (!importedMealData) return;
+  // Fix day keys as integers
   const fixed = {};
   Object.keys(importedMealData.days).forEach(k => { fixed[parseInt(k)] = importedMealData.days[k]; });
   state.mealData.days = fixed;
   if (importedMealData.times) state.mealData.times = importedMealData.times;
-  const generatedShop = generateShopFromMeals(state.mealData);
-  if (generatedShop.length > 0) state.shopData = generatedShop;
-  save(); renderMeals(); updateProgress(); renderMealEditor(); cancelImport();
-  showToast('Scheda e lista spesa aggiornate! ✓');
+  save();
+  renderMeals();
+  updateProgress();
+  renderMealEditor();
+  cancelImport();
+  showToast('Scheda importata! ✓');
 }
 </script>
 <script>
