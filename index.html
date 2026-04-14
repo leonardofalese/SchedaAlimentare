@@ -172,7 +172,7 @@
           </div>
           <div class="progress-info">
             <div class="progress-title" id="progressTitle">Inizia la giornata</div>
-            <div class="progress-sub">2700 kcal · tutto a crudo</div>
+            <div class="progress-sub" id="kcalDisplay">0 kcal consumate</div>
             <div class="meal-dots" id="mealDots"></div>
           </div>
         </div>
@@ -268,8 +268,8 @@
 
   <nav class="bottom-nav">
     <button class="nav-btn active" onclick="switchView('oggi',this)">
-      <span class="nav-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f0f0f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg></span>
-      <span class="nav-lbl">Oggi</span>
+      <span class="nav-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f0f0f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="12" x2="22" y2="12"/><rect x="1" y="9" width="4" height="6" rx="1"/><rect x="19" y="9" width="4" height="6" rx="1"/><rect x="5" y="7" width="3" height="10" rx="1"/><rect x="16" y="7" width="3" height="10" rx="1"/></svg></span>
+      <span class="nav-lbl">Home</span>
     </button>
     <button class="nav-btn" onclick="switchView('tracker',this)">
       <span class="nav-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f0f0f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
