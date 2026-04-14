@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SchedaLeo">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<meta name="theme-color" content="#0a0a0a">
+<title>SchedaLeo</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0a0a0a;--bg2:#111;--bg3:#1a1a1a;--card:#161616;--card2:#1e1e1e;
+  --green:#b8f566;--green-dim:rgba(184,245,102,.1);
+  --orange:#ff8c42;
+  --text:#f0f0f0;--text-mid:#888;--text-soft:#444;
+  --border:rgba(255,255,255,.06);--border2:rgba(255,255,255,.1);
+  --font:'Syne',sans-serif;--mono:'DM Mono',monospace;
+  --r:16px;--r-sm:10px;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg)}
+body{font-family:var(--font);color:var(--text)}
+.app{height:100dvh;display:flex;flex-direction:column;overflow:hidden;position:relative}
+.content{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:90px}
+.content::-webkit-scrollbar{display:none}
+.header{padding:max(env(safe-area-inset-top),14px) 20px 14px;background:var(--bg);flex-shrink:0;border-bottom:1px solid var(--border)}
+.header-top{display:flex;justify-content:space-between;align-items:center}
+.app-title{font-size:20px;font-weight:800;letter-spacing:-.5px}
+.app-title em{color:var(--green);font-style:normal}
+.date-pill{background:var(--card2);border:1px solid var(--border2);border-radius:20px;padding:5px 12px;font-size:11px;font-family:var(--mono);color:var(--text-mid)}
+.day-nav{display:flex;gap:6px;padding:14px 20px 0;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
+.day-nav::-webkit-scrollbar{display:none}
+.day-btn{flex-shrink:0;padding:8px 16px;border-radius:20px;border:1px solid var(--border2);background:transparent;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;color:var(--text-mid)}
+.day-btn.active{background:var(--green);border-color:var(--green);color:#0a0a0a}
+.day-btn.has-activity{border-color:rgba(184,245,102,.3);color:var(--text)}
+.progress-card{margin:16px 20px 0;background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:20px;display:flex;align-items:center;gap:20px}
+.ring-wrap{position:relative;width:72px;height:72px;flex-shrink:0}
+.ring-wrap svg{transform:rotate(-90deg)}
+.ring-bg{fill:none;stroke:var(--bg3);stroke-width:6}
+.ring-fill{fill:none;stroke:var(--green);stroke-width:6;stroke-linecap:round;transition:stroke-dashoffset .5s ease}
+.ring-label{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:var(--mono);font-size:15px;font-weight:500;color:var(--green)}
+.progress-info{flex:1}
+.progress-title{font-size:16px;font-weight:700;margin-bottom:4px}
+.progress-sub{font-size:12px;color:var(--text-mid)}
+.meal-dots{display:flex;gap:6px;margin-top:10px}
+.meal-dot-wrap{flex:1;text-align:center}
+.meal-dot{height:3px;border-radius:2px;background:var(--bg3);transition:all .3s}
+.meal-dot.done{background:var(--green)}
+.meal-dot-label{font-size:9px;color:var(--text-soft);margin-top:4px;font-family:var(--mono)}
+.section{padding:20px 20px 0}
+.section-label{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-soft);margin-bottom:12px}
+.meal-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden;transition:border-color .25s,background .25s;cursor:pointer}
+.meal-card.done{border-color:rgba(184,245,102,.3);background:#111a0d}
+.meal-header{display:flex;align-items:center;gap:12px;padding:14px 16px}
+.meal-icon-wrap{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--bg3);border:1px solid var(--border2)}
+.meal-card.done .meal-icon-wrap{background:rgba(184,245,102,.1);border-color:rgba(184,245,102,.2)}
+.meal-info{flex:1}
+.meal-name{font-size:14px;font-weight:700}
+.meal-time{font-size:11px;color:var(--text-mid);margin-top:2px;font-family:var(--mono)}
+.meal-check{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+.meal-check.checked{background:var(--green);border-color:var(--green)}
+.meal-foods{padding:0 16px 14px 68px}
+.food-row{display:flex;align-items:baseline;gap:8px;padding:3px 0;border-bottom:1px solid var(--border);font-size:13px}
+.food-row:last-child{border-bottom:none}
+.food-qty{font-family:var(--mono);font-size:11px;color:var(--orange);font-weight:500;min-width:52px}
+.food-name{color:var(--text-mid)}
+.tracker-day{background:var(--card);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden}
+.tracker-day-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer;user-select:none}
+.tracker-day-name{font-size:13px;font-weight:700}
+.score-bar{display:flex;gap:3px}
+.score-dot{width:8px;height:8px;border-radius:50%;background:var(--bg3);border:1px solid var(--border2);transition:all .2s}
+.score-dot.done{background:var(--green);border-color:var(--green)}
+.tracker-meals{padding:0 16px 12px;border-top:1px solid var(--border)}
+.tracker-meal-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+.tracker-meal-row:last-child{border-bottom:none}
+.tracker-cb{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--border2);flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s}
+.tracker-cb.checked{background:var(--green);border-color:var(--green)}
+.tracker-cb.checked::after{content:'✓';color:#0a0a0a;font-size:9px;font-weight:800}
+.tracker-meal-name{font-size:12px;color:var(--text-mid)}
+.tracker-meal-name.done{color:var(--text)}
+.shop-progress{margin:0 20px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px}
+.shop-prog-label{font-size:11px;color:var(--text-soft);margin-bottom:8px;display:flex;justify-content:space-between}
+.shop-prog-label span{color:var(--green);font-family:var(--mono)}
+.shop-prog-bar{height:4px;background:var(--bg3);border-radius:2px;overflow:hidden}
+.shop-prog-fill{height:100%;background:var(--green);border-radius:2px;transition:width .4s ease}
+.shop-wrap{padding:0 20px}
+.shop-cat{margin-bottom:20px}
+.shop-cat-title{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-soft);padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:2px}
+.shop-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:opacity .2s}
+.shop-item.bought{opacity:.4}
+.shop-cb2{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--border2);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.shop-cb2.checked{background:var(--green);border-color:var(--green)}
+.shop-cb2.checked::after{content:'✓';color:#0a0a0a;font-size:10px;font-weight:800}
+.shop-name{font-size:13px;flex:1}
+.shop-item.bought .shop-name{text-decoration:line-through}
+.shop-qty{font-family:var(--mono);font-size:11px;color:var(--orange);font-weight:500}
+.shop-actions{display:flex;gap:8px;padding:8px 20px 0}
+.shop-btn{flex:1;padding:12px;border-radius:var(--r-sm);border:1px solid var(--border2);background:var(--card);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;color:var(--text-mid);transition:all .15s}
+.timer-wrap{padding:20px 20px 0}
+.timer-hero{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:28px 20px;text-align:center;margin-bottom:12px}
+.timer-next-label{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-soft);margin-bottom:10px}
+.timer-meal-name{font-size:18px;font-weight:800;margin-bottom:4px}
+.timer-meal-foods{font-size:12px;color:var(--text-mid);margin-bottom:24px;font-family:var(--mono)}
+.timer-display{font-family:var(--mono);font-size:54px;font-weight:500;color:var(--green);letter-spacing:-3px;line-height:1;margin-bottom:24px;transition:color .3s}
+.timer-display.urgent{color:var(--orange)}
+.timer-cta{background:var(--green);color:#0a0a0a;border:none;border-radius:40px;padding:13px 28px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer}
+.sched-row{background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;transition:all .2s}
+.sched-row.next{border-color:rgba(184,245,102,.4);background:rgba(184,245,102,.06)}
+.sched-row.past{opacity:.4}
+.sched-left{display:flex;align-items:center;gap:10px}
+.sched-name{font-size:13px;font-weight:700}
+.sched-status{font-size:11px;color:var(--text-mid);margin-top:2px}
+.sched-time{font-family:var(--mono);font-size:13px;color:var(--orange);font-weight:500}
+.settings-wrap{padding:20px}
+.settings-section{margin-bottom:28px}
+.settings-section-title{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-soft);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.settings-row{background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 16px;margin-bottom:8px}
+.settings-row-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.settings-row-name{font-size:14px;font-weight:700}
+.settings-row-time{display:flex;align-items:center;gap:8px}
+.settings-row-time label{font-size:11px;color:var(--text-mid);font-family:var(--mono)}
+.time-input{background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:4px 8px;font-family:var(--mono);font-size:13px;color:var(--text);width:74px;text-align:center}
+.food-edit-list{display:flex;flex-direction:column;gap:6px}
+.food-edit-row{display:flex;gap:6px;align-items:center}
+.food-edit-input{flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;font-family:var(--font);font-size:12px;color:var(--text);outline:none}
+.food-edit-input:focus{border-color:var(--green)}
+.del-btn{width:28px;height:28px;border-radius:6px;border:1px solid var(--border2);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text-mid);font-size:16px;line-height:1;transition:all .15s}
+.del-btn:active{border-color:#ff5555;color:#ff5555}
+.add-food-btn{background:transparent;border:1px dashed var(--border2);border-radius:6px;padding:7px 10px;font-family:var(--font);font-size:12px;color:var(--text-mid);cursor:pointer;width:100%;margin-top:4px}
+.day-tabs{display:flex;gap:4px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none}
+.day-tabs::-webkit-scrollbar{display:none}
+.day-tab{flex-shrink:0;padding:6px 12px;border-radius:20px;border:1px solid var(--border2);background:transparent;font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;color:var(--text-mid)}
+.day-tab.active{background:rgba(184,245,102,.1);border-color:rgba(184,245,102,.4);color:var(--green)}
+.save-btn{background:var(--green);color:#0a0a0a;border:none;border-radius:40px;padding:13px 28px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;display:block;width:100%;margin-top:8px}
+.shop-edit-row{display:flex;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)}
+.shop-edit-row:last-child{border-bottom:none}
+.shop-edit-name{flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:6px 8px;font-family:var(--font);font-size:12px;color:var(--text);outline:none}
+.shop-edit-name:focus{border-color:var(--green)}
+.shop-edit-qty{width:76px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:6px 8px;font-family:var(--mono);font-size:11px;color:var(--orange);outline:none}
+.shop-edit-qty:focus{border-color:var(--orange)}
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--green);color:#0a0a0a;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:700;opacity:0;transition:all .3s;pointer-events:none;z-index:999}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.bottom-nav{position:absolute;bottom:0;left:0;right:0;background:rgba(10,10,10,.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;padding:10px 0 max(env(safe-area-inset-bottom),10px);z-index:100;flex-shrink:0}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:4px;border:none;background:none;font-family:var(--font);transition:all .2s}
+.nav-ico{width:24px;height:24px;display:flex;align-items:center;justify-content:center;transition:transform .2s}
+.nav-ico svg{opacity:.35;transition:opacity .2s}
+.nav-btn.active .nav-ico svg{opacity:1}
+.nav-btn.active .nav-ico svg *{stroke:var(--green)}
+.nav-lbl{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-soft);transition:color .2s}
+.nav-btn.active .nav-lbl{color:var(--green)}
+.nav-btn.active .nav-ico{transform:scale(1.1)}
+.view{display:none}
+.view.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.meal-card{animation:fadeUp .25s ease both}
+.meal-card:nth-child(1){animation-delay:.03s}
+.meal-card:nth-child(2){animation-delay:.06s}
+.meal-card:nth-child(3){animation-delay:.09s}
+.meal-card:nth-child(4){animation-delay:.12s}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-top">
+      <div class="app-title">Scheda<em>Leo</em></div>
+      <div class="date-pill" id="datePill">—</div>
+    </div>
+  </div>
+  <div class="day-nav" id="dayNav"></div>
+  <div class="content" id="mainContent">
+
+    <div class="view active" id="view-oggi">
+      <div style="padding:16px 20px 0">
+        <div class="progress-card">
+          <div class="ring-wrap">
+            <svg width="72" height="72" viewBox="0 0 72 72">
+              <circle class="ring-bg" cx="36" cy="36" r="30"/>
+              <circle class="ring-fill" id="ringFill" cx="36" cy="36" r="30" stroke-dasharray="188.5" stroke-dashoffset="188.5"/>
+            </svg>
+            <div class="ring-label" id="ringLabel">0/4</div>
+          </div>
+          <div class="progress-info">
+            <div class="progress-title" id="progressTitle">Inizia la giornata</div>
+            <div class="progress-sub">2700 kcal · tutto a crudo</div>
+            <div class="meal-dots" id="mealDots"></div>
+          </div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-label">Pasti del giorno</div>
+        <div id="mealsContainer"></div>
+      </div>
+    </div>
+
+    <div class="view" id="view-tracker">
+      <div style="padding:20px 20px 0">
+        <div style="font-size:22px;font-weight:800;margin-bottom:4px">Tracker</div>
+        <div style="font-size:13px;color:var(--text-mid);margin-bottom:16px">Settimana in corso</div>
+        <div id="trackerContent"></div>
+      </div>
+    </div>
+
+    <div class="view" id="view-spesa">
+      <div style="padding:20px 20px 0">
+        <div style="font-size:22px;font-weight:800;margin-bottom:4px">Lista spesa</div>
+        <div style="font-size:13px;color:var(--text-mid);margin-bottom:16px">Ingredienti settimanali</div>
+      </div>
+      <div class="shop-progress">
+        <div class="shop-prog-label">Completato <span id="shopPct">0%</span></div>
+        <div class="shop-prog-bar"><div class="shop-prog-fill" id="shopProgFill" style="width:0%"></div></div>
+      </div>
+      <div class="shop-wrap" id="shopContent"></div>
+      <div class="shop-actions">
+        <button class="shop-btn" onclick="resetShop()">↺ Azzera</button>
+        <button class="shop-btn" onclick="checkAll()" style="border-color:rgba(184,245,102,.3);color:var(--green)">✓ Tutto</button>
+      </div>
+      <div style="height:20px"></div>
+    </div>
+
+    <div class="view" id="view-timer">
+      <div class="timer-wrap">
+        <div class="timer-hero">
+          <div class="timer-next-label">Prossimo pasto</div>
+          <div class="timer-meal-name" id="timerMealName">—</div>
+          <div class="timer-meal-foods" id="timerMealFoods">—</div>
+          <div class="timer-display" id="timerDisplay">--:--:--</div>
+          <button class="timer-cta" onclick="markNextDone()">Segna come fatto ✓</button>
+        </div>
+        <div class="section-label">Programma giornaliero</div>
+        <div id="scheduleList"></div>
+      </div>
+      <div style="height:20px"></div>
+    </div>
+
+    <div class="view" id="view-settings">
+      <div class="settings-wrap">
+        <div style="font-size:22px;font-weight:800;margin-bottom:4px">Modifica</div>
+        <div style="font-size:13px;color:var(--text-mid);margin-bottom:20px">Orari, alimenti e lista spesa</div>
+        <div class="settings-section">
+          <div class="settings-section-title">Pasti & Orari per giorno</div>
+          <div class="day-tabs" id="settingsDayTabs"></div>
+          <div id="mealEditorContainer"></div>
+          <button class="save-btn" onclick="saveMeals()">Salva modifiche pasti</button>
+        </div>
+        <div class="settings-section">
+          <div class="settings-section-title">Lista della spesa</div>
+          <div id="shopEditorContainer"></div>
+          <button class="add-food-btn" style="margin-top:12px" onclick="addShopCategory()">+ Nuova categoria</button>
+          <button class="save-btn" style="margin-top:8px" onclick="saveShop()">Salva lista spesa</button>
+        </div>
+        <div style="height:20px"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <nav class="bottom-nav">
+    <button class="nav-btn active" onclick="switchView('oggi',this)">
+      <span class="nav-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f0f0f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg></span>
+      <span class="nav-lbl">Oggi</span>
+    </button>
+    <button class="nav-btn" onclick="switchView('tracker',this)">
+      <span class="nav-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f0f0f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>
+      <span class="nav-lbl">Tracker</span>
+    </button>
+    <button class="nav-btn" onclick="switchView('spesa',this)">
+      <span class="nav-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f0f0f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></span>
+      <span class="nav-lbl">Spesa</span>
+    </button>
+    <button class="nav-btn" onclick="switchView('timer',this)">
+      <span class="nav-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f0f0f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+      <span class="nav-lbl">Orari</span>
+    </button>
+    <button class="nav-btn" onclick="switchView('settings',this)">
+      <span class="nav-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f0f0f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+      <span class="nav-lbl">Modifica</span>
+    </button>
+  </nav>
+</div>
+<div class="toast" id="toast">Salvato!</div>
+
+<script>
+const GIORNI=['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'];
+const GIORNI_SHORT=['Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
+const MEAL_KEYS=['colazione','pranzo','spuntini','cena'];
+const MEAL_LABELS={colazione:'Colazione',pranzo:'Pranzo',spuntini:'Spuntini',cena:'Cena'};
+
+const ICO = {
+  colazione:`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>`,
+  pranzo:`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>`,
+  spuntini:`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+  cena:`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`
+};
+
+const DEFAULT_MEALS={
+  times:{colazione:'07:30',pranzo:'13:00',spuntini:'16:30',cena:'20:00'},
+  days:{
+    0:{colazione:['150g latte intero','100g avena','15g cacao','1 frutto'],pranzo:['140g pasta con pomodoro','30g grana','2 scatolette tonno','200g zucchine'],cena:['180g salmone','100g pane','200g zucchine'],spuntini:['70g pane in cassetta','90g bresaola']},
+    1:{colazione:['100g latte intero','90g avena','15g cacao','150g greco'],pranzo:['250g macinato manzo magro','120g riso basmati','250g zucchine','15g burro'],cena:['140g pasta integrale','250g petto di pollo','200g carote','20g grana','10g olio'],spuntini:['1 pacchetto Galbusera protein']},
+    2:{colazione:['150g greco','70g biscotti secchi','1 frutto'],pranzo:['140g pasta integrale','1 busta salmone affumicato','200g zucchine','10g olio'],cena:['200g bistecca vitello','130g pane','200g verdure a scelta','10g olio'],spuntini:['3 fette pane in cassetta','40g miele','20g frutta secca']},
+    3:{colazione:['150g latte intero','70g avena','150g greco','1 frutto'],pranzo:['200g petto di pollo','350g patate','15g olio'],cena:['140g pasta integrale al pomodoro','2 scatolette tonno no olio','200g zucchine','10g olio'],spuntini:['30g cioccolato fondente']},
+    4:{colazione:['250g latte intero',"80g cereali Kellogg's fondente"],pranzo:['110g riso basmati','220g macinato magro','250g zucchine','10g olio'],cena:['3 uova','300g patate','150g carote'],spuntini:['150g banana','20g cioccolato']},
+    5:{colazione:['150g latte intero','80g avena','20g cioccolato fondente'],pranzo:['140g pasta con pomodoro','20g grana','2 scatolette tonno','200g zucchine'],cena:['180g salmone','100g pane','200g zucchine'],spuntini:['70g pane in cassetta','90g bresaola']},
+    6:{colazione:['Giorno libero'],pranzo:['Libero'],cena:['Libero'],spuntini:['Libero']}
+  }
+};
+
+const DEFAULT_SHOP=[
+  {cat:'Proteine',items:[{name:'Tonno in scatoletta',qty:'8 scatolette'},{name:'Salmone fresco',qty:'360g'},{name:'Salmone affumicato',qty:'1 busta'},{name:'Petto di pollo',qty:'450g'},{name:'Macinato manzo magro',qty:'470g'},{name:'Bistecca di vitello',qty:'200g'},{name:'Bresaola',qty:'180g'},{name:'Uova',qty:'3 pz'},{name:'Galbusera protein',qty:'1 pacco'}]},
+  {cat:'Carboidrati & Cereali',items:[{name:'Pasta normale',qty:'280g'},{name:'Pasta integrale',qty:'420g'},{name:'Riso basmati',qty:'230g'},{name:'Avena',qty:'460g'},{name:'Pane',qty:'400g'},{name:'Pane in cassetta',qty:'210g'},{name:'Biscotti secchi',qty:'70g'},{name:'Patate',qty:'650g'},{name:"Cereali Kellogg's",qty:'80g'}]},
+  {cat:'Latticini',items:[{name:'Latte intero',qty:'1,2 L'},{name:'Yogurt greco',qty:'450g'},{name:'Grana Padano',qty:'90g'},{name:'Burro',qty:'15g'}]},
+  {cat:'Verdure & Frutta',items:[{name:'Zucchine',qty:'2 kg'},{name:'Carote',qty:'350g'},{name:'Verdure miste',qty:'200g'},{name:'Frutta fresca',qty:'4-5 pz'},{name:'Banana',qty:'1 pz'}]},
+  {cat:'Condimenti',items:[{name:'Olio EVO',qty:'80g'},{name:'Passata di pomodoro',qty:'q.b.'},{name:'Miele',qty:'40g'},{name:'Frutta secca',qty:'20g'},{name:'Cacao amaro',qty:'30g'},{name:'Cioccolato fondente',qty:'70g'}]}
+];
+
+let state={};
+try{state=JSON.parse(localStorage.getItem('schedaLeo_v3')||'{}');}catch(e){}
+if(!state.meals)state.meals={};
+if(!state.shop)state.shop={};
+if(!state.mealData)state.mealData=JSON.parse(JSON.stringify(DEFAULT_MEALS));
+if(!state.shopData)state.shopData=JSON.parse(JSON.stringify(DEFAULT_SHOP));
+// ensure all day keys are numbers
+const fixedDays={};
+Object.keys(state.mealData.days).forEach(k=>{fixedDays[parseInt(k)]=state.mealData.days[k];});
+state.mealData.days=fixedDays;
+const save=()=>{try{localStorage.setItem('schedaLeo_v3',JSON.stringify(state));}catch(e){}};
+
+let today=new Date().getDay();today=today===0?6:today-1;
+let currentDay=today,timerInt=null,settingsDay=0;
+
+const mealKey=(d,k)=>`d${d}_${k}`;
+const isDone=(d,k)=>!!state.meals[mealKey(d,k)];
+function parseFood(f){
+  const m=f.match(/^(\d+\s*(?:g|ml|kg|L|pz|pacco|busta|scatolette|fette|frutto)?\s+)/i);
+  if(m&&m[0].trim())return{qty:m[0].trim(),name:f.slice(m[0].length).trim()||f};
+  return{qty:'',name:f};
+}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg||'Salvato!';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);}
+
+// INIT
+document.getElementById('datePill').textContent=new Date().toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'});
+renderDayNav();renderMeals();updateProgress();
+
+function renderDayNav(){
+  document.getElementById('dayNav').innerHTML=GIORNI_SHORT.map((g,i)=>{
+    const hasAny=MEAL_KEYS.some(k=>isDone(i,k));
+    return`<button class="day-btn ${i===currentDay?'active':''} ${hasAny&&i!==currentDay?'has-activity':''}" onclick="selectDay(${i})">${g}</button>`;
+  }).join('');
+}
+function selectDay(i){currentDay=i;renderDayNav();renderMeals();updateProgress();document.getElementById('mainContent').scrollTop=0;}
+
+function renderMeals(){
+  const times=state.mealData.times;
+  document.getElementById('mealsContainer').innerHTML=MEAL_KEYS.map(k=>{
+    const done=isDone(currentDay,k);
+    const foods=state.mealData.days[currentDay]?.[k]||[];
+    return`<div class="meal-card ${done?'done':''}" onclick="toggleMeal(${currentDay},'${k}')">
+      <div class="meal-header">
+        <div class="meal-icon-wrap" style="color:${done?'var(--green)':'var(--text-mid)'}">${ICO[k]}</div>
+        <div class="meal-info"><div class="meal-name">${MEAL_LABELS[k]}</div><div class="meal-time">${times[k]}</div></div>
+        <div class="meal-check ${done?'checked':''}">${done?'<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#0a0a0a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>':''}</div>
+      </div>
+      <div class="meal-foods">${foods.map(f=>{const p=parseFood(f);return`<div class="food-row"><span class="food-qty">${p.qty}</span><span class="food-name">${p.name}</span></div>`;}).join('')}</div>
+    </div>`;
+  }).join('');
+}
+function toggleMeal(d,k){state.meals[mealKey(d,k)]=!isDone(d,k);save();renderMeals();updateProgress();renderDayNav();}
+function updateProgress(){
+  const done=MEAL_KEYS.filter(k=>isDone(currentDay,k)).length;
+  document.getElementById('ringFill').style.strokeDashoffset=188.5-(188.5*(done/4));
+  document.getElementById('ringLabel').textContent=done+'/4';
+  document.getElementById('progressTitle').textContent=['Inizia la giornata','Ottimo inizio!','Metà strada','Quasi fatto!','Completata! ⚡'][done];
+  document.getElementById('mealDots').innerHTML=MEAL_KEYS.map(k=>`<div class="meal-dot-wrap"><div class="meal-dot ${isDone(currentDay,k)?'done':''}"></div><div class="meal-dot-label">${k.slice(0,3).toUpperCase()}</div></div>`).join('');
+}
+
+function renderTracker(){
+  document.getElementById('trackerContent').innerHTML=GIORNI.map((g,di)=>{
+    const cnt=MEAL_KEYS.filter(k=>isDone(di,k)).length;
+    const dots=MEAL_KEYS.map(k=>`<div class="score-dot ${isDone(di,k)?'done':''}"></div>`).join('');
+    const rows=MEAL_KEYS.map(k=>{const d=isDone(di,k);return`<div class="tracker-meal-row"><div class="tracker-cb ${d?'checked':''}" onclick="event.stopPropagation();toggleMeal(${di},'${k}');renderTracker()"></div><span class="tracker-meal-name ${d?'done':''}">${MEAL_LABELS[k]} · ${state.mealData.times[k]}</span></div>`;}).join('');
+    const isT=di===today;
+    return`<div class="tracker-day" style="${isT?'border-color:rgba(184,245,102,.3)':''}">
+      <div class="tracker-day-header" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+        <span class="tracker-day-name">${g}${isT?' <span style="font-size:10px;color:var(--green);font-family:var(--mono)">· OGGI</span>':''}</span>
+        <span style="display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px"><div class="score-bar">${dots}</div>${cnt}/4</span>
+      </div>
+      <div class="tracker-meals" style="display:${isT?'block':'none'}">${rows}</div>
+    </div>`;
+  }).join('');
+}
+
+const shopKey=(ci,i)=>`s_${ci}_${i}`;
+const isShopDone=(ci,i)=>!!state.shop[shopKey(ci,i)];
+function renderShop(){
+  const tot=state.shopData.reduce((a,c)=>a+c.items.length,0);
+  const done=state.shopData.reduce((a,c,ci)=>a+c.items.filter((_,i)=>isShopDone(ci,i)).length,0);
+  const pct=tot?Math.round(done/tot*100):0;
+  document.getElementById('shopPct').textContent=pct+'%';
+  document.getElementById('shopProgFill').style.width=pct+'%';
+  document.getElementById('shopContent').innerHTML=state.shopData.map((cat,ci)=>`
+    <div class="shop-cat"><div class="shop-cat-title">${cat.cat}</div>
+      ${cat.items.map((item,i)=>{const d=isShopDone(ci,i);return`<div class="shop-item ${d?'bought':''}" onclick="toggleShop(${ci},${i})"><div class="shop-cb2 ${d?'checked':''}"></div><span class="shop-name">${item.name}</span><span class="shop-qty">${item.qty}</span></div>`;}).join('')}
+    </div>`).join('');
+}
+function toggleShop(ci,i){state.shop[shopKey(ci,i)]=!state.shop[shopKey(ci,i)];save();renderShop();}
+function resetShop(){state.shop={};save();renderShop();}
+function checkAll(){state.shopData.forEach((c,ci)=>c.items.forEach((_,i)=>{state.shop[shopKey(ci,i)]=true;}));save();renderShop();}
+
+function renderTimer(){
+  const now=new Date(),times=state.mealData.times;
+  const mt=MEAL_KEYS.map(k=>{const[h,m]=times[k].split(':').map(Number);const t=new Date();t.setHours(h,m,0,0);return{key:k,date:t};}).sort((a,b)=>a.date-b.date);
+  const next=(mt.find(m=>m.date>now)||mt[0]);
+  const foods=state.mealData.days[currentDay]?.[next.key]||[];
+  document.getElementById('timerMealName').textContent=MEAL_LABELS[next.key];
+  document.getElementById('timerMealFoods').textContent=foods.slice(0,2).join(' · ')+(foods.length>2?'…':'');
+  if(timerInt)clearInterval(timerInt);
+  const tick=()=>{
+    const n=new Date();let diff=next.date-n;if(diff<0)diff+=86400000;
+    const h=Math.floor(diff/3600000),m=Math.floor((diff%3600000)/60000),s=Math.floor((diff%60000)/1000);
+    const el=document.getElementById('timerDisplay');
+    el.textContent=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    el.classList.toggle('urgent',diff<600000);
+  };
+  tick();timerInt=setInterval(tick,1000);
+  document.getElementById('scheduleList').innerHTML=mt.map(m=>{
+    const isN=m.key===next.key,isPast=m.date<now&&!isN;
+    return`<div class="sched-row ${isN?'next':''} ${isPast?'past':''}">
+      <div class="sched-left"><div style="color:${isN?'var(--green)':'var(--text-mid)'}">${ICO[m.key]}</div><div><div class="sched-name">${MEAL_LABELS[m.key]}</div><div class="sched-status">${isN?'⟵ prossimo':isPast?'passato':'in arrivo'}</div></div></div>
+      <span class="sched-time">${times[m.key]}</span>
+    </div>`;
+  }).join('');
+}
+function markNextDone(){
+  const now=new Date(),times=state.mealData.times;
+  const mt=MEAL_KEYS.map(k=>{const[h,mn]=times[k].split(':').map(Number);const t=new Date();t.setHours(h,mn,0,0);return{key:k,date:t};}).sort((a,b)=>a.date-b.date);
+  const next=mt.find(m=>m.date>now)||mt[0];
+  toggleMeal(currentDay,next.key);renderTimer();
+}
+
+function renderSettingsDayTabs(){
+  document.getElementById('settingsDayTabs').innerHTML=GIORNI_SHORT.map((g,i)=>`<button class="day-tab ${i===settingsDay?'active':''}" onclick="selectSettingsDay(${i})">${g}</button>`).join('');
+}
+function selectSettingsDay(i){settingsDay=i;renderSettingsDayTabs();renderMealEditor();}
+function renderMealEditor(){
+  const times=state.mealData.times;
+  const dayData=state.mealData.days[settingsDay]||{};
+  document.getElementById('mealEditorContainer').innerHTML=MEAL_KEYS.map(k=>`
+    <div class="settings-row">
+      <div class="settings-row-header">
+        <div class="settings-row-name">${MEAL_LABELS[k]}</div>
+        <div class="settings-row-time"><label>Orario</label><input class="time-input" type="time" id="time_${k}" value="${times[k]}"></div>
+      </div>
+      <div class="food-edit-list" id="foods_${k}">
+        ${(dayData[k]||[]).map((f,i)=>`<div class="food-edit-row"><input class="food-edit-input" type="text" value="${f.replace(/"/g,'&quot;')}" id="fi_${k}_${i}" placeholder="es. 150g latte intero"><button class="del-btn" onclick="delFood('${k}',${i})">×</button></div>`).join('')}
+      </div>
+      <button class="add-food-btn" onclick="addFood('${k}')">+ Aggiungi alimento</button>
+    </div>`).join('');
+}
+function addFood(k){
+  if(!state.mealData.days[settingsDay][k])state.mealData.days[settingsDay][k]=[];
+  state.mealData.days[settingsDay][k].push('');
+  save();renderMealEditor();
+  const inputs=document.querySelectorAll(`#foods_${k} .food-edit-input`);
+  if(inputs.length)inputs[inputs.length-1].focus();
+}
+function delFood(k,idx){state.mealData.days[settingsDay][k].splice(idx,1);save();renderMealEditor();}
+function saveMeals(){
+  MEAL_KEYS.forEach(k=>{
+    const tEl=document.getElementById('time_'+k);
+    if(tEl&&tEl.value)state.mealData.times[k]=tEl.value;
+    const inputs=document.querySelectorAll(`#foods_${k} .food-edit-input`);
+    state.mealData.days[settingsDay][k]=Array.from(inputs).map(i=>i.value.trim()).filter(Boolean);
+  });
+  save();renderMeals();updateProgress();showToast('Pasti salvati!');
+}
+
+function renderShopEditor(){
+  document.getElementById('shopEditorContainer').innerHTML=state.shopData.map((cat,ci)=>`
+    <div style="margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="shop-cat-title" style="border:none;padding:0;margin:0">${cat.cat}</div>
+        <button class="del-btn" onclick="delShopCat(${ci})" style="font-size:12px;width:auto;padding:0 8px;color:var(--text-soft)">Rimuovi cat.</button>
+      </div>
+      <div id="shopEditCat_${ci}">
+        ${cat.items.map((item,i)=>`<div class="shop-edit-row"><input class="shop-edit-name" type="text" value="${item.name.replace(/"/g,'&quot;')}" id="sn_${ci}_${i}" placeholder="Ingrediente"><input class="shop-edit-qty" type="text" value="${item.qty.replace(/"/g,'&quot;')}" id="sq_${ci}_${i}" placeholder="qtà"><button class="del-btn" onclick="delShopItem(${ci},${i})">×</button></div>`).join('')}
+      </div>
+      <button class="add-food-btn" style="margin-top:6px" onclick="addShopItem(${ci})">+ Aggiungi</button>
+    </div>`).join('');
+}
+function addShopItem(ci){state.shopData[ci].items.push({name:'',qty:''});save();renderShopEditor();const rows=document.querySelectorAll(`#shopEditCat_${ci} .shop-edit-name`);if(rows.length)rows[rows.length-1].focus();}
+function delShopItem(ci,i){state.shopData[ci].items.splice(i,1);save();renderShopEditor();}
+function delShopCat(ci){if(confirm('Rimuovere la categoria?')){state.shopData.splice(ci,1);save();renderShopEditor();}}
+function addShopCategory(){const name=prompt('Nome categoria:');if(!name)return;state.shopData.push({cat:name,items:[]});save();renderShopEditor();}
+function saveShop(){
+  state.shopData.forEach((cat,ci)=>{
+    cat.items.forEach((item,i)=>{
+      const n=document.getElementById(`sn_${ci}_${i}`),q=document.getElementById(`sq_${ci}_${i}`);
+      if(n)item.name=n.value.trim();if(q)item.qty=q.value.trim();
+    });
+    cat.items=cat.items.filter(item=>item.name);
+  });
+  state.shopData=state.shopData.filter(cat=>cat.items.length||true);
+  save();renderShop();showToast('Lista salvata!');
+}
+
+function switchView(view,btn){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('view-'+view).classList.add('active');
+  btn.classList.add('active');
+  document.getElementById('mainContent').scrollTop=0;
+  if(view==='tracker')renderTracker();
+  if(view==='spesa')renderShop();
+  if(view==='timer')renderTimer();
+  else if(timerInt){clearInterval(timerInt);timerInt=null;}
+  if(view==='settings'){renderSettingsDayTabs();renderMealEditor();renderShopEditor();}
+}
+</script>
+<script>if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js");}</script>
+</body>
+</html>
