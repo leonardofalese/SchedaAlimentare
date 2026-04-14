@@ -540,6 +540,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentUser = null;
 let syncTimeout = null;
+let isRegistering = false; // flag per distinguere registrazione da login
 
 // ── DATI DEFAULT ──────────────────────────────────────────
 const GIORNI=['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'];
@@ -644,13 +645,20 @@ async function doRegister() {
   const nicknameClean = nickname.charAt(0).toUpperCase() + nickname.slice(1).toLowerCase();
   const btn = document.getElementById('registerBtn');
   btn.disabled = true; btn.textContent = 'Creazione…';
+  isRegistering = true;
   const {data, error} = await sb.auth.signUp({
     email, password,
     options: { data: { nickname: nicknameClean } }
   });
   btn.disabled = false; btn.textContent = 'Crea account';
-  if (error) return showAuthError(error.message);
-  if (data.user) showAuthError('✓ Controlla la tua email per confermare l\'account, poi accedi.');
+  if (error) { isRegistering = false; return showAuthError(error.message); }
+  if (data.user && data.session) {
+    // Login automatico avvenuto (email confirm disabilitata)
+    // isRegistering verrà usato da onAuthStateChange
+  } else if (data.user) {
+    isRegistering = false;
+    showAuthError('✓ Account creato! Controlla la tua email per confermare, poi accedi.', true);
+  }
 }
 
 async function doLogout() {
@@ -777,7 +785,9 @@ sb.auth.onAuthStateChange(async (event, session) => {
     showAllHidden();
     document.getElementById('resetScreen').classList.remove('hidden');
   } else if (event === 'SIGNED_IN') {
-    if (!currentUser) await initApp(session.user, false);
+    const newUser = isRegistering;
+    isRegistering = false;
+    if (!currentUser) await initApp(session.user, newUser);
   } else if (event === 'SIGNED_OUT') {
     showAuth();
   }
