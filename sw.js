@@ -1,4 +1,4 @@
-const CACHE_NAME = 'scheda-alimentare-v3';
+const CACHE_NAME = 'scheda-alimentare-v4';
 const ASSETS = ['/', '/index.html', '/manifest.json', '/icon-192.png', '/icon-512.png',
   '/css/app.css', '/js/config.js', '/js/state.js', '/js/auth.js',
   '/js/sync.js', '/js/render.js', '/js/app.js', '/js/init.js'];

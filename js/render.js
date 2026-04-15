@@ -254,6 +254,16 @@ function addShopItem(ci) { state.shopData[ci].items.push({name:'',qty:''}); save
 function delShopItem(ci,i) { state.shopData[ci].items.splice(i,1); save(); renderShopEditor(); }
 function delShopCat(ci) { if(confirm('Rimuovere la categoria?')){state.shopData.splice(ci,1);save();renderShopEditor();} }
 function addShopCategory() { const name=prompt('Nome categoria:'); if(!name)return; state.shopData.push({cat:name,items:[]}); save(); renderShopEditor(); }
+function recalcShopFromMeals() {
+  const generated = generateShopFromMeals(state.mealData);
+  if (generated.length > 0) {
+    state.shopData = generated;
+    state.shop = {};
+    save();
+    renderShopEditor();
+    showToast('Lista spesa ricalcolata!');
+  }
+}
 function saveShop() {
   state.shopData.forEach((cat,ci)=>{
     cat.items.forEach((item,i)=>{
