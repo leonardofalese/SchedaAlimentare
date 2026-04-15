@@ -54,7 +54,23 @@ function cancelWelcomeImport() {
 // ── GENERA LISTA SPESA DA SCHEDA ─────────────────────────
 function generateShopFromMeals(mealData) {
   const allFoods = {};
-  
+
+  // Unità contabili (non in grammi)
+  const COUNT_UNITS = ['pz','fette','fetta','scatolette','scatoletta','busta','buste','pacco','pacchetto','frutto','frutti'];
+  // Fattori di conversione in grammi per le unità contabili
+  const UNIT_TO_G = { pz:50, frutto:150, frutti:150, fette:50, fetta:50, scatolette:80, scatoletta:80, busta:100, buste:100, pacco:100, pacchetto:100, kg:1000, l:1000, ml:1 };
+
+  function parseQtyStr(qtyStr) {
+    if (!qtyStr) return { amount: 0, unit: 'g' };
+    const m = qtyStr.match(/^(\d+(?:[.,]\d+)?)\s*(g|kg|ml|l|pz|fette?|scatolett[ae]|bust[ae]|pacco|pacchetto|frutto|frutti)?/i);
+    if (!m || !m[1]) return { amount: 0, unit: 'g' };
+    return { amount: parseFloat(m[1].replace(',','.')), unit: (m[2]||'g').toLowerCase() };
+  }
+
+  function toGrams(amount, unit) {
+    return amount * (UNIT_TO_G[unit] !== undefined ? UNIT_TO_G[unit] : 1);
+  }
+
   Object.values(mealData.days).forEach(day => {
     MEAL_KEYS.forEach(k => {
       (day[k] || []).forEach(food => {
@@ -63,20 +79,55 @@ function generateShopFromMeals(mealData) {
         const name = p.name.trim();
         if (!name) return;
         const key = name.toLowerCase();
+        const { amount, unit } = parseQtyStr(p.qty);
+        if (amount === 0) return;
+
         if (!allFoods[key]) {
-          allFoods[key] = { name: name, qty: p.qty || '' };
+          allFoods[key] = { name, totalGrams: 0, countTotal: 0, countUnit: null };
+        }
+
+        const isCount = COUNT_UNITS.includes(unit);
+        if (isCount && allFoods[key].totalGrams === 0) {
+          // Accumula come unità contabile (es. scatolette, buste)
+          if (!allFoods[key].countUnit) allFoods[key].countUnit = unit;
+          allFoods[key].countTotal += amount;
+        } else {
+          // Accumula in grammi; se c'erano già unità contabili, convertile
+          if (allFoods[key].countTotal > 0) {
+            allFoods[key].totalGrams += toGrams(allFoods[key].countTotal, allFoods[key].countUnit);
+            allFoods[key].countTotal = 0;
+            allFoods[key].countUnit = null;
+          }
+          allFoods[key].totalGrams += toGrams(amount, unit);
         }
       });
     });
   });
+
+  function formatQty(item) {
+    if (item.countTotal > 0) {
+      const u = item.countUnit || '';
+      const label = (u === 'scatolette' || u === 'scatoletta') ? (item.countTotal === 1 ? 'scatoletta' : 'scatolette')
+                  : (u === 'fette' || u === 'fetta')           ? (item.countTotal === 1 ? 'fetta' : 'fette')
+                  : (u === 'busta' || u === 'buste')           ? (item.countTotal === 1 ? 'busta' : 'buste')
+                  : (u === 'pacco' || u === 'pacchetto')       ? (item.countTotal === 1 ? 'pz' : 'pz')
+                  : 'pz';
+      return `${item.countTotal} ${label}`;
+    }
+    if (item.totalGrams === 0) return '';
+    if (item.totalGrams >= 1000) {
+      const kg = item.totalGrams / 1000;
+      return `${parseFloat(kg.toFixed(1))} kg`;
+    }
+    return `${Math.round(item.totalGrams)}g`;
+  }
 
   // Raggruppa in categorie base
   const proteine = ['tonno','salmone','pollo','manzo','macinato','bistecca','bresaola','uova','uovo','prosciutto','tacchino','merluzzo','sgombro'];
   const carboidrati = ['pasta','riso','pane','avena','farro','orzo','cereali','biscotti','cracker','patate','fette','gallette'];
   const latticini = ['latte','yogurt','greco','grana','parmigiano','mozzarella','ricotta','burro','formaggio'];
   const verdure = ['zucchine','carote','spinaci','insalata','broccoli','pomodori','peperoni','melanzane','cipolla','aglio','verdure','funghi','cavolo','cetrioli','lattuga'];
-  const frutta = ['mela','pera','banana','arancia','kiwi','fragole','uva','ananas','mango','frutto','frutti','frutte','melone'];
-  const condimenti = ['olio','sale','pepe','miele','aceto','salsa','passata','pomodoro','dado','spezie','erbe','cacao','cioccolato','frutta secca','mandorle','noci','nocciole'];
+  const frutta = ['mela','pera','banana','arancia','kiwi','fragole','uva','ananas','mango','frutto','frutti','melone'];
 
   const cats = {
     'Proteine': [],
@@ -88,25 +139,18 @@ function generateShopFromMeals(mealData) {
 
   Object.values(allFoods).forEach(item => {
     const nameLow = item.name.toLowerCase();
-    if (proteine.some(p => nameLow.includes(p))) {
-      cats['Proteine'].push(item);
-    } else if (carboidrati.some(p => nameLow.includes(p))) {
-      cats['Carboidrati & Cereali'].push(item);
-    } else if (latticini.some(p => nameLow.includes(p))) {
-      cats['Latticini'].push(item);
-    } else if (verdure.some(p => nameLow.includes(p)) || frutta.some(p => nameLow.includes(p))) {
-      cats['Verdure & Frutta'].push(item);
-    } else {
-      cats['Condimenti & Altro'].push(item);
-    }
+    const entry = { name: item.name, qty: formatQty(item) };
+    if (proteine.some(p => nameLow.includes(p)))           cats['Proteine'].push(entry);
+    else if (carboidrati.some(p => nameLow.includes(p)))   cats['Carboidrati & Cereali'].push(entry);
+    else if (latticini.some(p => nameLow.includes(p)))     cats['Latticini'].push(entry);
+    else if (verdure.some(p => nameLow.includes(p)) ||
+             frutta.some(p => nameLow.includes(p)))        cats['Verdure & Frutta'].push(entry);
+    else                                                    cats['Condimenti & Altro'].push(entry);
   });
 
   return Object.entries(cats)
     .filter(([,items]) => items.length > 0)
-    .map(([cat, items]) => ({
-      cat,
-      items: items.map(i => ({ name: i.name, qty: i.qty }))
-    }));
+    .map(([cat, items]) => ({ cat, items }));
 }
 
 async function confirmWelcomeImport() {

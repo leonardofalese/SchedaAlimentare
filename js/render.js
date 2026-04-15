@@ -93,9 +93,12 @@ function saveInlineMeal(k) {
   const newFoods = Array.from(inputs).map(i => i.value.trim()).filter(Boolean);
   if (!state.mealData.days[currentDay]) state.mealData.days[currentDay] = {};
   state.mealData.days[currentDay][k] = newFoods;
+  const generated = generateShopFromMeals(state.mealData);
+  if (generated.length > 0) state.shopData = generated;
   save();
   renderMeals();
   updateProgress();
+  showToast('Salvato · lista spesa aggiornata');
 }
 
 function updateProgress() {
@@ -216,7 +219,12 @@ function addFood(k) {
   const inputs=document.querySelectorAll(`#foods_${k} .food-edit-input`);
   if(inputs.length)inputs[inputs.length-1].focus();
 }
-function delFood(k,idx) { state.mealData.days[settingsDay][k].splice(idx,1); save(); renderMealEditor(); }
+function delFood(k,idx) {
+  state.mealData.days[settingsDay][k].splice(idx,1);
+  const generated = generateShopFromMeals(state.mealData);
+  if (generated.length > 0) state.shopData = generated;
+  save(); renderMealEditor(); renderShopEditor();
+}
 function saveMeals() {
   MEAL_KEYS.forEach(k=>{
     const tEl=document.getElementById('time_'+k);
@@ -224,7 +232,9 @@ function saveMeals() {
     const inputs=document.querySelectorAll(`#foods_${k} .food-edit-input`);
     state.mealData.days[settingsDay][k]=Array.from(inputs).map(i=>i.value.trim()).filter(Boolean);
   });
-  save(); renderMeals(); updateProgress(); showToast('Pasti salvati!');
+  const generated = generateShopFromMeals(state.mealData);
+  if (generated.length > 0) { state.shopData = generated; renderShopEditor(); }
+  save(); renderMeals(); updateProgress(); showToast('Pasti e lista spesa aggiornati!');
 }
 
 function renderShopEditor() {
