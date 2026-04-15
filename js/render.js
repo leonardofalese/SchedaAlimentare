@@ -1000,21 +1000,35 @@ function renderWeightCard() {
   const todayEntry = log.find(e => e.date === todayStr);
   const last = log.length > 0 ? log[log.length - 1] : null;
   const prev = log.length > 1 ? log[log.length - 2] : null;
+  const displayKg = todayEntry?.kg ?? last?.kg ?? state.profileData?.peso ?? null;
   const delta = (last && prev) ? (last.kg - prev.kg) : null;
   const deltaStr = delta !== null ? (delta > 0 ? `+${delta.toFixed(1)}` : delta.toFixed(1)) + ' kg' : '';
-  const deltaColor = delta === null ? '' : delta > 0 ? (state.profileData?.obiettivo === 'dimagrire' ? 'color:#ff6b6b' : 'color:var(--green)') : (state.profileData?.obiettivo === 'massa' ? 'color:#ff6b6b' : 'color:var(--green)');
+  const deltaColor = delta === null ? '' : delta > 0
+    ? (state.profileData?.obiettivo === 'dimagrire' ? 'color:#ff6b6b' : 'color:var(--green)')
+    : (state.profileData?.obiettivo === 'massa' ? 'color:#ff6b6b' : 'color:var(--green)');
+  const pencilSvg = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
 
-  el.innerHTML = `<div class="weight-card">
-    <div class="weight-card-left">
-      <div class="weight-card-label">Peso oggi</div>
-      <div class="weight-card-val">${todayEntry ? todayEntry.kg + ' kg' : (last ? last.kg + ' kg' : (state.profileData?.peso ? state.profileData.peso + ' kg' : '—'))}</div>
-      ${deltaStr ? `<div class="weight-card-delta" style="${deltaColor}">${deltaStr} dall'ultima</div>` : ''}
+  el.innerHTML = `<div class="weight-pill">
+    <div class="weight-pill-view" id="weightPillView">
+      <span class="weight-pill-kg">${displayKg ? displayKg + ' kg' : '— kg'}</span>
+      ${deltaStr ? `<span class="weight-pill-delta" style="${deltaColor}">${deltaStr}</span>` : ''}
+      <button class="weight-edit-btn" onclick="toggleWeightEdit(true)" title="Modifica peso">${pencilSvg}</button>
     </div>
-    <div class="weight-card-right">
-      <input class="weight-input" type="number" step="0.1" min="30" max="300" id="weightInput" placeholder="${todayEntry ? todayEntry.kg : 'kg'}" ${todayEntry ? `value="${todayEntry.kg}"` : ''}>
-      <button class="weight-save-btn" onclick="logWeight()">✓</button>
+    <div class="weight-pill-edit" id="weightPillEdit">
+      <input class="weight-input-sm" type="number" step="0.1" min="30" max="300" id="weightInput" placeholder="kg"${displayKg ? ` value="${displayKg}"` : ''}>
+      <button class="weight-save-sm" onclick="logWeight()">✓</button>
+      <button class="weight-cancel-sm" onclick="toggleWeightEdit(false)">✕</button>
     </div>
   </div>`;
+}
+
+function toggleWeightEdit(open) {
+  const view = document.getElementById('weightPillView');
+  const edit = document.getElementById('weightPillEdit');
+  if (!view || !edit) return;
+  view.style.display = open ? 'none' : 'flex';
+  edit.style.display = open ? 'flex' : 'none';
+  if (open) setTimeout(() => document.getElementById('weightInput')?.focus(), 50);
 }
 
 function logWeight() {
@@ -1026,7 +1040,6 @@ function logWeight() {
   const idx = state.weightLog.findIndex(e => e.date === todayStr);
   if (idx >= 0) state.weightLog[idx].kg = val;
   else state.weightLog.push({ date: todayStr, kg: val });
-  // Aggiorna anche profileData.peso così i calcoli BMR/TDEE restano aggiornati
   if (!state.profileData) state.profileData = {};
   state.profileData.peso = val;
   save();

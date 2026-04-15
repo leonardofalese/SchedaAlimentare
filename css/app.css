@@ -374,15 +374,18 @@ body{font-family:var(--font);color:var(--text)}
 .gym-log-btn{background:rgba(100,180,255,.1);border:1px solid rgba(100,180,255,.3);border-radius:6px;color:#64b4ff;font-size:12px;font-weight:700;padding:7px 12px;cursor:pointer;font-family:var(--font);flex-shrink:0;white-space:nowrap}
 .gym-log-btn:active{background:rgba(100,180,255,.25)}
 /* PESO LOG */
-.weight-card{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--border2);border-radius:var(--r-sm);padding:12px 16px;gap:12px}
-.weight-card-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-mid);margin-bottom:3px}
-.weight-card-val{font-size:20px;font-weight:800;font-family:var(--mono);color:var(--text)}
-.weight-card-delta{font-size:11px;font-weight:700;margin-top:2px;font-family:var(--mono)}
-.weight-card-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.weight-input{width:72px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:7px 8px;font-family:var(--mono);font-size:14px;font-weight:700;color:var(--text);text-align:center;outline:none;-moz-appearance:textfield}
-.weight-input::-webkit-outer-spin-button,.weight-input::-webkit-inner-spin-button{-webkit-appearance:none}
-.weight-input:focus{border-color:var(--green)}
-.weight-save-btn{background:var(--green);color:#000;border:none;border-radius:6px;width:32px;height:32px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700}
+.weight-pill{display:inline-flex;align-items:center}
+.weight-pill-view{display:flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:4px 8px 4px 10px}
+.weight-pill-kg{font-size:12px;font-weight:700;font-family:var(--mono);color:var(--text)}
+.weight-pill-delta{font-size:11px;font-weight:700;font-family:var(--mono)}
+.weight-edit-btn{background:none;border:none;cursor:pointer;color:var(--text-mid);padding:0;display:flex;align-items:center;opacity:.55;line-height:1}
+.weight-edit-btn:hover{opacity:1;color:var(--green)}
+.weight-pill-edit{display:none;align-items:center;gap:5px}
+.weight-input-sm{width:60px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:4px 6px;font-family:var(--mono);font-size:12px;font-weight:700;color:var(--text);text-align:center;outline:none;-moz-appearance:textfield}
+.weight-input-sm::-webkit-outer-spin-button,.weight-input-sm::-webkit-inner-spin-button{-webkit-appearance:none}
+.weight-input-sm:focus{border-color:var(--green)}
+.weight-save-sm{background:var(--green);color:#000;border:none;border-radius:6px;width:24px;height:24px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700}
+.weight-cancel-sm{background:transparent;color:var(--text-mid);border:1px solid var(--border2);border-radius:6px;width:24px;height:24px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 /* DAY WARNINGS */
 .day-warn-dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:#ffaa55;vertical-align:top;margin-left:2px;margin-top:2px;flex-shrink:0}
 .day-warn-banner{background:rgba(255,170,85,.07);border:1px solid rgba(255,170,85,.2);border-radius:var(--r-sm);padding:10px 14px;margin-bottom:12px;display:flex;align-items:flex-start;gap:10px}
