@@ -205,41 +205,36 @@
         <button class="shop-btn" onclick="resetShop()">↺ Azzera</button>
         <button class="shop-btn" onclick="checkAll()" style="border-color:rgba(184,245,102,.3);color:var(--green)">✓ Tutto</button>
       </div>
-      <div style="height:20px"></div>
-    </div>
-
-    <div class="view" id="view-timer">
-      <div class="timer-wrap">
-        <div class="timer-hero">
-          <div class="timer-next-label">Prossimo pasto</div>
-          <div class="timer-meal-name" id="timerMealName">—</div>
-          <div class="timer-meal-foods" id="timerMealFoods">—</div>
-          <div class="timer-display" id="timerDisplay">--:--:--</div>
-          <button class="timer-cta" onclick="markNextDone()">Segna come fatto ✓</button>
+      <div class="settings-wrap" style="margin-top:8px">
+        <div class="settings-section">
+          <div class="settings-section-title">Modifica lista</div>
+          <button onclick="recalcShopFromMeals()" style="background:none;border:1px solid var(--green);color:var(--green);border-radius:20px;padding:6px 14px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;margin-bottom:14px">↺ Ricalcola da scheda</button>
+          <div id="shopEditorContainer"></div>
+          <button class="add-food-btn" style="margin-top:12px" onclick="addShopCategory()">+ Nuova categoria</button>
+          <button class="save-btn" style="margin-top:8px" onclick="saveShop()">Salva lista spesa</button>
         </div>
-        <div class="section-label">Programma giornaliero</div>
-        <div id="scheduleList"></div>
       </div>
       <div style="height:20px"></div>
     </div>
 
-    <div class="view" id="view-settings">
+    <div class="view" id="view-scheda">
       <div class="settings-wrap">
-        <div style="font-size:22px;font-weight:800;margin-bottom:4px">Modifica</div>
-        <div style="font-size:13px;color:var(--text-mid);margin-bottom:20px">Orari, alimenti e lista spesa</div>
+        <div style="font-size:22px;font-weight:800;margin-bottom:4px">Scheda</div>
+        <div style="font-size:13px;color:var(--text-mid);margin-bottom:20px">Pasti e orari settimanali</div>
         <div class="settings-section">
           <div class="settings-section-title">Pasti & Orari per giorno</div>
           <div class="day-tabs" id="settingsDayTabs"></div>
           <div id="mealEditorContainer"></div>
           <button class="save-btn" onclick="saveMeals()">Salva modifiche pasti</button>
         </div>
-        <div class="settings-section">
-          <div class="settings-section-title">Lista della spesa</div>
-          <button onclick="recalcShopFromMeals()" style="background:none;border:1px solid var(--green);color:var(--green);border-radius:20px;padding:6px 14px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;margin-bottom:14px">↺ Ricalcola da scheda</button>
-          <div id="shopEditorContainer"></div>
-          <button class="add-food-btn" style="margin-top:12px" onclick="addShopCategory()">+ Nuova categoria</button>
-          <button class="save-btn" style="margin-top:8px" onclick="saveShop()">Salva lista spesa</button>
-        </div>
+        <div style="height:20px"></div>
+      </div>
+    </div>
+
+    <div class="view" id="view-settings">
+      <div class="settings-wrap">
+        <div style="font-size:22px;font-weight:800;margin-bottom:4px">Impostazioni</div>
+        <div style="font-size:13px;color:var(--text-mid);margin-bottom:20px">Sovrascrivi la scheda da file</div>
         <div class="settings-section">
           <div class="settings-section-title">Sovrascrivi scheda da file</div>
           <div style="font-size:12px;color:var(--text-mid);margin-bottom:12px">Carica un nuovo file per sovrascrivere tutti i pasti della settimana. L'operazione sostituirà la scheda attuale.</div>
@@ -280,13 +275,13 @@
       <span class="nav-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f0f0f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></span>
       <span class="nav-lbl">Spesa</span>
     </button>
-    <button class="nav-btn" onclick="switchView('timer',this)">
-      <span class="nav-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f0f0f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
-      <span class="nav-lbl">Orari</span>
+    <button class="nav-btn" onclick="switchView('scheda',this)">
+      <span class="nav-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f0f0f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg></span>
+      <span class="nav-lbl">Scheda</span>
     </button>
     <button class="nav-btn" onclick="switchView('settings',this)">
       <span class="nav-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f0f0f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
-      <span class="nav-lbl">Modifica</span>
+      <span class="nav-lbl">Impostazioni</span>
     </button>
   </nav>
 </div>

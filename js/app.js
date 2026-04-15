@@ -4,11 +4,10 @@ function switchView(view,btn) {
   document.getElementById('view-'+view).classList.add('active');
   btn.classList.add('active');
   document.getElementById('mainContent').scrollTop=0;
+  if(timerInt){clearInterval(timerInt);timerInt=null;}
   if(view==='tracker')renderTracker();
-  if(view==='spesa')renderShop();
-  if(view==='timer')renderTimer();
-  else if(timerInt){clearInterval(timerInt);timerInt=null;}
-  if(view==='settings'){renderSettingsDayTabs();renderMealEditor();renderShopEditor();}
+  if(view==='spesa'){renderShop();renderShopEditor();}
+  if(view==='scheda'){renderSettingsDayTabs();renderMealEditor();}
 }
 
 
