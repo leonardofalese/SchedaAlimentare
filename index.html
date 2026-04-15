@@ -220,6 +220,7 @@
         </div>
         <div class="section">
           <div class="section-label">Pasti del giorno</div>
+          <div id="dayWarnBanner" style="display:none"></div>
           <div id="mealsContainer"></div>
         </div>
       </div>
@@ -283,8 +284,9 @@
           <button class="schede-tab" id="schedeTabGym" onclick="switchSchedeTab('palestra')">Palestra</button>
         </div>
         <div id="schedeAlimentare">
+          <div id="schedeAutoCheckBanner" style="display:none"></div>
           <div class="settings-section">
-            <div class="settings-section-title">Pasti & Orari per giorno</div>
+            <div class="settings-section-title">Pasti & Orari per giorno <span class="crudo-badge">kcal a crudo</span></div>
             <div class="day-tabs" id="settingsDayTabs"></div>
             <div id="mealEditorContainer"></div>
             <button class="save-btn" onclick="saveMeals()">Salva modifiche pasti</button>

@@ -37,7 +37,7 @@ function switchSchedeTab(tab) {
   if (tabGym)  tabGym.classList.toggle('active',  tab === 'palestra');
   if (secAlim) secAlim.style.display = tab === 'alimentare' ? '' : 'none';
   if (secGym)  secGym.style.display  = tab === 'palestra'   ? '' : 'none';
-  if (tab === 'alimentare') { renderSettingsDayTabs(); renderMealEditor(); }
+  if (tab === 'alimentare') { renderSettingsDayTabs(); renderMealEditor(); _schedeAutoCheck(); }
   if (tab === 'palestra')   { renderGymEditorDayTabs(); renderGymEditor(); }
 }
 
@@ -659,6 +659,36 @@ function confirmGymImport(ctx) {
     renderHomePalestra();
   }
   _refreshTracker();
+}
+
+// ── SCHEDE AUTO CHECK ─────────────────────────────────────
+function _schedeAutoCheck() {
+  const banner = document.getElementById('schedeAutoCheckBanner');
+  if (!banner) return;
+  const GIORNI_NAMES = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'];
+  const issues = [];
+  for (let d = 0; d < 7; d++) {
+    MEAL_KEYS.forEach(k => {
+      (state.mealData.days[d]?.[k] || []).forEach(f => {
+        if (!f || /libero/i.test(f)) return;
+        const p = parseFood(f);
+        if (_isAmbiguousFood(p.name)) issues.push(`${p.name} (${GIORNI_NAMES[d]})`);
+      });
+    });
+  }
+  if (issues.length === 0) { banner.style.display = 'none'; return; }
+  banner.style.display = '';
+  banner.innerHTML = `<div class="schede-check-banner">
+    <div class="schede-check-title">⚠ ${issues.length} aliment${issues.length===1?'o senza':'i senza'} cotto/crudo nella scheda</div>
+    <div class="schede-check-list">${issues.slice(0,8).join(' · ')}${issues.length>8?` … +${issues.length-8} altri`:''}</div>
+    <button class="schede-check-btn" onclick="agentFixAmbiguous()">Correggi tutto con AI</button>
+  </div>`;
+}
+function agentFixAmbiguous() {
+  const input = document.getElementById('agentAlimInput');
+  if (!input) return;
+  input.value = 'Per tutti gli alimenti ambigui della scheda (pasta, riso, pollo, carne, pesce, patate ecc.) aggiungi "cotta"/"cotto" o "cruda"/"crudo" come appropriato in base al contesto — di default usa "cotta" per i carboidrati e "crudo" per le proteine.';
+  agentEditAlim();
 }
 
 // ── AGENT EDIT ────────────────────────────────────────────

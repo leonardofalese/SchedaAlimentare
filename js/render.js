@@ -27,16 +27,48 @@ function showToast(msg) {
   setTimeout(()=>t.classList.remove('show'), 2000);
 }
 
+function _dayHasWarnings(dayIndex) {
+  return MEAL_KEYS.some(k => {
+    const foods = state.mealData.days[dayIndex]?.[k] || [];
+    return foods.some(f => {
+      if (!f || /libero/i.test(f)) return false;
+      const p = parseFood(f);
+      if (_isAmbiguousFood(p.name)) return true;
+      if (!p.qty && p.name) return true;
+      return false;
+    });
+  });
+}
 function renderDayNav() {
   document.getElementById('dayNav').innerHTML = GIORNI_SHORT.map((g,i) => {
     const hasAny = MEAL_KEYS.some(k=>isDone(i,k));
-    return `<button class="day-btn ${i===currentDay?'active':''} ${hasAny&&i!==currentDay?'has-activity':''}" onclick="selectDay(${i})">${g}</button>`;
+    const warn   = _dayHasWarnings(i);
+    return `<button class="day-btn ${i===currentDay?'active':''} ${hasAny&&i!==currentDay?'has-activity':''}" onclick="selectDay(${i})">${g}${warn?'<span class="day-warn-dot"></span>':''}</button>`;
   }).join('');
 }
 function selectDay(i) { currentDay=i; renderDayNav(); renderMeals(); updateProgress(); renderHomePalestra(); document.getElementById('mainContent').scrollTop=0; }
 
 function renderMeals() {
   const times = state.mealData.times;
+  // Warning banner per alimenti ambigui o senza quantità nel giorno corrente
+  const warnItems = [];
+  MEAL_KEYS.forEach(k => {
+    (state.mealData.days[currentDay]?.[k] || []).forEach(f => {
+      if (!f || /libero/i.test(f)) return;
+      const p = parseFood(f);
+      if (_isAmbiguousFood(p.name)) warnItems.push({ name: p.name, type: 'cotto/crudo' });
+      else if (!p.qty && p.name)   warnItems.push({ name: p.name, type: 'quantità' });
+    });
+  });
+  const wb = document.getElementById('dayWarnBanner');
+  if (wb) {
+    if (warnItems.length > 0) {
+      wb.innerHTML = `<div class="day-warn-banner"><span class="day-warn-icon">⚠</span><div><strong>${warnItems.length} aliment${warnItems.length===1?'o richiede':'i richiedono'} attenzione</strong><div class="day-warn-list">${warnItems.map(x=>`${x.name} <span class="day-warn-type">(${x.type})</span>`).join(' · ')}</div></div></div>`;
+      wb.style.display = '';
+    } else {
+      wb.style.display = 'none';
+    }
+  }
   document.getElementById('mealsContainer').innerHTML = MEAL_KEYS.map(k => {
     const done = isDone(currentDay,k);
     const foods = state.mealData.days[currentDay]?.[k]||[];
@@ -649,6 +681,12 @@ function checkFoodHint(k, i, val) {
   const el = document.getElementById(`fh_${k}_${i}`);
   if (el) el.style.display = _isAmbiguousFood(val) ? 'flex' : 'none';
 }
+function applyFoodQualifier(k, i, qualifier) {
+  const nameEl = document.getElementById(`fi-name_${k}_${i}`);
+  if (!nameEl) return;
+  nameEl.value = (nameEl.value.trim() + ' ' + qualifier).trim();
+  checkFoodHint(k, i, nameEl.value);
+}
 
 function renderMealEditor() {
   const times=state.mealData.times;
@@ -670,7 +708,11 @@ function renderMealEditor() {
               <button class="del-btn" onclick="delFood('${k}',${i})">×</button>
             </div>
             <div class="food-hint" id="fh_${k}_${i}" style="display:${ambig?'flex':'none'}">
-              <span>⚠</span> specifica <strong>cotto</strong> o <strong>crudo</strong> — il peso cambia le kcal
+              <span>⚠</span> specifica
+              <button class="food-hint-btn" onclick="applyFoodQualifier('${k}',${i},'cotta')">cotto</button>
+              o
+              <button class="food-hint-btn" onclick="applyFoodQualifier('${k}',${i},'cruda')">crudo</button>
+              — il peso cambia le kcal
             </div>
           </div>`;
         }).join('')}
