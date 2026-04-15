@@ -288,6 +288,14 @@
             <div class="day-tabs" id="settingsDayTabs"></div>
             <div id="mealEditorContainer"></div>
             <button class="save-btn" onclick="saveMeals()">Salva modifiche pasti</button>
+          <div class="agent-edit-section">
+            <label class="agent-edit-label">Modifica con AI</label>
+            <div class="agent-edit-row">
+              <input class="agent-edit-input" type="text" id="agentAlimInput" placeholder="Es. aggiungi 100g petto di pollo al pranzo di lunedì…" onkeydown="if(event.key==='Enter')agentEditAlim()">
+              <button class="agent-edit-btn" id="agentAlimBtn" onclick="agentEditAlim()">↑</button>
+            </div>
+            <div class="agent-edit-status" id="agentAlimStatus"></div>
+          </div>
           </div>
         </div>
         <div id="schedePalestra" style="display:none">
@@ -296,6 +304,14 @@
             <div class="day-tabs" id="gymEditorDayTabs"></div>
             <div id="gymEditorContainer"></div>
             <button class="save-btn" onclick="saveGymExercises()">Salva scheda palestra</button>
+            <div class="agent-edit-section">
+              <label class="agent-edit-label">Modifica con AI</label>
+              <div class="agent-edit-row">
+                <input class="agent-edit-input" type="text" id="agentGymInput" placeholder="Es. aggiungi 3 serie di croci ai cavi al martedì…" onkeydown="if(event.key==='Enter')agentEditGym()">
+                <button class="agent-edit-btn" id="agentGymBtn" onclick="agentEditGym()">↑</button>
+              </div>
+              <div class="agent-edit-status" id="agentGymStatus"></div>
+            </div>
           </div>
         </div>
         <div style="height:20px"></div>

@@ -409,6 +409,20 @@ function delFood(k,idx) {
   if (generated.length > 0) state.shopData = generated;
   save(); renderMealEditor(); renderShopEditor();
 }
+function _readMealEditorToState() {
+  MEAL_KEYS.forEach(k => {
+    const tEl = document.getElementById('time_' + k);
+    if (tEl && tEl.value) state.mealData.times[k] = tEl.value;
+    const nameInputs = document.querySelectorAll(`[id^="fi-name_${k}_"]`);
+    if (nameInputs.length) {
+      state.mealData.days[settingsDay][k] = Array.from(nameInputs).map((nameEl, i) => {
+        const qtyEl = document.getElementById(`fi-qty_${k}_${i}`);
+        return ((qtyEl?.value||'') + ' ' + nameEl.value).trim();
+      }).filter(Boolean);
+    }
+  });
+}
+
 function saveMeals() {
   MEAL_KEYS.forEach(k=>{
     const tEl=document.getElementById('time_'+k);

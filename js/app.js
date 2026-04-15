@@ -659,6 +659,110 @@ function confirmGymImport(ctx) {
   }
 }
 
+// ── AGENT EDIT ────────────────────────────────────────────
+async function agentEditAlim() {
+  const input   = document.getElementById('agentAlimInput');
+  const statusEl= document.getElementById('agentAlimStatus');
+  const btn     = document.getElementById('agentAlimBtn');
+  const request = input.value.trim();
+  if (!request) return;
+
+  _readMealEditorToState();
+  statusEl.innerHTML = '<span class="import-spinner"></span> Elaborazione…';
+  statusEl.className = 'agent-edit-status';
+  btn.disabled = true;
+
+  const system = `Sei un assistente che modifica schede alimentari. Ogni giorno ha colazione/pranzo/spuntini/cena come array di stringhe (es. ["150g Pasta","100g Pollo"]).
+MAPPATURA GIORNI OBBLIGATORIA: "0"=Lunedì "1"=Martedì "2"=Mercoledì "3"=Giovedì "4"=Venerdì "5"=Sabato "6"=Domenica
+Se la modifica è piccola (max 5 alimenti, orari, quantità, 1-2 giorni), rispondi SOLO con:
+{"status":"ok","summary":"breve descrizione della modifica","data":{"times":{...},"days":{"0":{...},...,"6":{...}}}}
+Se troppo grande o riguarda tutta la settimana, rispondi SOLO con: {"status":"too_complex"}
+Restituisci SOLO il JSON, niente altro.`;
+
+  try {
+    const res = await fetch('/api/claude', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ system, message: `Scheda attuale:\n${JSON.stringify(state.mealData)}\n\nRichiesta: ${request}`, maxTokens: 4000 })
+    });
+    const data = await res.json();
+    const raw  = (data.content?.[0]?.text||'').trim();
+    const match = raw.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(match ? match[0] : raw);
+
+    if (parsed.status === 'too_complex') {
+      statusEl.innerHTML = '⚠ Modifica troppo complessa: ricarica la scheda con un nuovo file.';
+      statusEl.className = 'agent-edit-status error';
+    } else if (parsed.status === 'ok' && parsed.data?.times && parsed.data?.days) {
+      state.mealData = parsed.data;
+      save();
+      renderMeals(); updateProgress(); renderSettingsDayTabs(); renderMealEditor();
+      input.value = '';
+      statusEl.innerHTML = `✓ ${parsed.summary || 'Modifica applicata!'}`;
+      statusEl.className = 'agent-edit-status success';
+      setTimeout(() => { statusEl.innerHTML = ''; statusEl.className = 'agent-edit-status'; }, 4000);
+    } else {
+      throw new Error('risposta non valida');
+    }
+  } catch(e) {
+    statusEl.innerHTML = '✗ Errore durante la modifica. Riprova.';
+    statusEl.className = 'agent-edit-status error';
+  }
+  btn.disabled = false;
+}
+
+async function agentEditGym() {
+  const input   = document.getElementById('agentGymInput');
+  const statusEl= document.getElementById('agentGymStatus');
+  const btn     = document.getElementById('agentGymBtn');
+  const request = input.value.trim();
+  if (!request) return;
+
+  _readGymEditorToState();
+  statusEl.innerHTML = '<span class="import-spinner"></span> Elaborazione…';
+  statusEl.className = 'agent-edit-status';
+  btn.disabled = true;
+
+  const system = `Sei un assistente che modifica schede di allenamento. Ogni giorno ha "nome" e "esercizi":[{nome,serie,ripetizioni,kg,recupero,note}].
+MAPPATURA GIORNI OBBLIGATORIA: "0"=Lunedì "1"=Martedì "2"=Mercoledì "3"=Giovedì "4"=Venerdì "5"=Sabato "6"=Domenica
+serie=intero, ripetizioni=stringa, kg=stringa o "", recupero=stringa o "".
+Se la modifica è piccola (max 3 esercizi, parametri, nome giorno), rispondi SOLO con:
+{"status":"ok","summary":"breve descrizione della modifica","data":{"0":{...},...,"6":{...}}}
+Se troppo complessa, rispondi SOLO con: {"status":"too_complex"}
+Restituisci SOLO il JSON, niente altro.`;
+
+  try {
+    const res = await fetch('/api/claude', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ system, message: `Scheda attuale:\n${JSON.stringify(state.gymData.giorni)}\n\nRichiesta: ${request}`, maxTokens: 4000 })
+    });
+    const data = await res.json();
+    const raw  = (data.content?.[0]?.text||'').trim();
+    const match = raw.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(match ? match[0] : raw);
+
+    if (parsed.status === 'too_complex') {
+      statusEl.innerHTML = '⚠ Modifica troppo complessa: ricarica la scheda con un nuovo file.';
+      statusEl.className = 'agent-edit-status error';
+    } else if (parsed.status === 'ok' && parsed.data) {
+      const fixed = {};
+      Object.keys(parsed.data).forEach(k => { fixed[parseInt(k)] = parsed.data[k]; });
+      state.gymData.giorni = fixed;
+      save();
+      renderGymEditorDayTabs(); renderGymEditor(); renderHomePalestra();
+      input.value = '';
+      statusEl.innerHTML = `✓ ${parsed.summary || 'Modifica applicata!'}`;
+      statusEl.className = 'agent-edit-status success';
+      setTimeout(() => { statusEl.innerHTML = ''; statusEl.className = 'agent-edit-status'; }, 4000);
+    } else {
+      throw new Error('risposta non valida');
+    }
+  } catch(e) {
+    statusEl.innerHTML = '✗ Errore durante la modifica. Riprova.';
+    statusEl.className = 'agent-edit-status error';
+  }
+  btn.disabled = false;
+}
+
 // ── IMPORT Q&A FLOW ───────────────────────────────────────
 function showImportQuestions(questions, containerId, ctx) {
   const el = document.getElementById(containerId);

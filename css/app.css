@@ -335,6 +335,18 @@ body{font-family:var(--font);color:var(--text)}
 .schede-tabs{display:flex;gap:0;margin-bottom:20px;background:var(--bg3);border-radius:var(--r-sm);padding:3px}
 .schede-tab{flex:1;padding:9px;border-radius:8px;border:none;background:transparent;font-family:var(--font);font-size:13px;font-weight:600;color:var(--text-mid);cursor:pointer;transition:all .2s}
 .schede-tab.active{background:var(--card2);color:var(--text)}
+/* AGENT EDIT */
+.agent-edit-section{margin-top:16px;padding-top:16px;border-top:1px solid var(--border)}
+.agent-edit-label{font-size:11px;font-weight:700;color:var(--text-mid);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;display:block}
+.agent-edit-row{display:flex;gap:8px;align-items:center}
+.agent-edit-input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 12px;font-family:var(--font);font-size:13px;color:var(--text);outline:none;min-width:0}
+.agent-edit-input:focus{border-color:var(--green)}
+.agent-edit-input::placeholder{color:var(--text-soft)}
+.agent-edit-btn{background:var(--green);color:#000;border:none;border-radius:var(--r-sm);padding:10px 14px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;flex-shrink:0}
+.agent-edit-btn:disabled{opacity:.5;cursor:not-allowed}
+.agent-edit-status{font-size:12px;color:var(--text-mid);margin-top:8px;min-height:18px;display:flex;align-items:center;gap:6px}
+.agent-edit-status.error{color:#ff6b6b}
+.agent-edit-status.success{color:var(--green)}
 /* GYM STOPWATCH */
 .gym-swatch-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:16px}
 .gym-swatch-display{font-family:var(--mono);font-size:36px;font-weight:500;color:var(--green);letter-spacing:.04em;min-width:90px}
