@@ -245,10 +245,12 @@ function renderTrackerAnalytics() {
                 : monthsNeeded < 12 ? monthsNeeded.toFixed(1) + ' mesi'
                 : (monthsNeeded / 12).toFixed(1) + ' anni';
 
-        // Composizione del gain
-        const muscleRatio = trainingDays >= 4 ? 0.70 : trainingDays >= 2 ? 0.60 : 0.45;
+        // Composizione del gain — muscleRatio scala con frequenza + volume
+        let muscleRatio = trainingDays >= 5 ? 0.72 : trainingDays >= 4 ? 0.65 : trainingDays >= 2 ? 0.55 : 0.40;
+        if (totalVol >= 10000) muscleRatio = Math.min(muscleRatio + 0.05, 0.80);
+        if (totalVol >= 20000) muscleRatio = Math.min(muscleRatio + 0.05, 0.80);
         const estMuscle   = parseFloat((kgDiff * muscleRatio).toFixed(1));
-        const estFat      = parseFloat((kgDiff * (1 - muscleRatio)).toFixed(1));
+        const estFat      = parseFloat(Math.max(kgDiff - estMuscle, 0).toFixed(1));
         gymProjNote = `<div class="analytics-gym-proj">
           <div class="analytics-gym-proj-title">Composizione stimata del gain</div>
           <div class="analytics-gym-proj-row"><span>Massa muscolare</span><strong class="analytics-green">+${estMuscle} kg</strong></div>
@@ -267,9 +269,12 @@ function renderTrackerAnalytics() {
                 : (weeksNeeded / 4.3).toFixed(1) + ' mesi';
 
         // Con allenamento si preserva più massa magra
-        const fatRatio    = trainingDays >= 3 ? 0.84 : trainingDays >= 1 ? 0.78 : 0.65;
-        const estFatLoss  = parseFloat((kgDiff * fatRatio).toFixed(1));
-        const estLeanLoss = parseFloat((kgDiff * (1 - fatRatio)).toFixed(1));
+        // Più volume → più preservazione muscolare in deficit
+        let fatRatio = trainingDays >= 4 ? 0.86 : trainingDays >= 2 ? 0.80 : trainingDays >= 1 ? 0.73 : 0.62;
+        if (totalVol >= 10000) fatRatio = Math.min(fatRatio + 0.03, 0.92);
+        const _fatRatio = fatRatio;
+        const estFatLoss  = parseFloat((kgDiff * _fatRatio).toFixed(1));
+        const estLeanLoss = parseFloat(Math.max(kgDiff - estFatLoss, 0).toFixed(1));
         gymProjNote = `<div class="analytics-gym-proj">
           <div class="analytics-gym-proj-title">Composizione stimata della perdita</div>
           <div class="analytics-gym-proj-row"><span>Grasso perso</span><strong class="analytics-green">−${estFatLoss} kg</strong></div>

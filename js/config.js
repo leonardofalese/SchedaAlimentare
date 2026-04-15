@@ -37,55 +37,96 @@ const DEFAULT_SHOP=[
   {cat:'Verdure & Frutta',items:[{name:'Zucchine',qty:'2 kg'},{name:'Carote',qty:'350g'},{name:'Verdure miste',qty:'200g'},{name:'Frutta fresca',qty:'4-5 pz'},{name:'Banana',qty:'1 pz'}]},
   {cat:'Condimenti',items:[{name:'Olio EVO',qty:'80g'},{name:'Passata di pomodoro',qty:'q.b.'},{name:'Miele',qty:'40g'},{name:'Frutta secca',qty:'20g'},{name:'Cacao amaro',qty:'30g'},{name:'Cioccolato fondente',qty:'70g'}]}
 ];
-// ── DATABASE CALORICO (kcal per 100g) ─────────────────────
+// ── DATABASE CALORICO (kcal per 100g, fonte USDA/INRAN) ───
+// Ordinato dal più specifico al più generico (importante per il lookup)
 const KCAL_DB = {
-  // Proteine
-  'latte intero': 61, 'latte': 61,
-  'yogurt greco': 97, 'greco': 97,
-  'uova': 155, 'uovo': 155,
-  'petto di pollo': 165, 'pollo': 165,
-  'macinato manzo': 250, 'macinato': 250, 'manzo': 250,
-  'bistecca vitello': 175, 'vitello': 175,
-  'salmone': 208, 'salmone fresco': 208, 'salmone affumicato': 172,
-  'tonno': 116, 'tonno in scatoletta': 116,
-  'bresaola': 151,
-  'prosciutto': 145,
-  'grana': 392, 'grana padano': 392, 'parmigiano': 392,
-  'mozzarella': 280,
+  // ── Latticini ──────────────────────────────────────────
+  'latte intero': 61, 'latte scremato': 36, 'latte parzialmente scremato': 47, 'latte': 61,
+  'yogurt greco 0%': 57, 'yogurt greco magro': 57, 'yogurt greco': 97, 'greco': 97,
+  'yogurt bianco': 63, 'yogurt': 63,
+  'ricotta': 174, 'ricotta di mucca': 174,
+  'grana padano': 392, 'parmigiano reggiano': 392, 'parmigiano': 392, 'grana': 392,
+  'mozzarella light': 165, 'mozzarella': 254,
+  'fiocchi di latte': 105,
   'burro': 717,
-  // Carboidrati
-  'pasta': 350, 'pasta integrale': 340,
-  'riso': 360, 'riso basmati': 356,
-  'pane': 265, 'pane in cassetta': 268,
-  'avena': 389,
-  'patate': 77,
-  'fette biscottate': 410, 'fette': 410,
-  'biscotti': 450, 'biscotti secchi': 450,
-  'cereali': 375,
-  'gallette': 388,
-  // Verdure
-  'zucchine': 17,
-  'carote': 41,
-  'spinaci': 23,
-  'insalata': 15,
-  'broccoli': 34,
-  'pomodori': 18,
+  'panna': 337,
+  // ── Proteine animali ───────────────────────────────────
+  'uova intere': 155, 'uova': 155, 'uovo': 155, 'albume': 52, 'tuorlo': 322,
+  'petto di pollo': 110, 'pollo arrosto': 165, 'pollo': 110,
+  'tacchino': 107, 'petto di tacchino': 107,
+  'macinato manzo magro': 178, 'macinato manzo': 248, 'macinato magro': 178, 'macinato': 248,
+  'bistecca di manzo': 217, 'manzo': 217,
+  'bistecca vitello': 108, 'vitello': 108,
+  'lonza maiale': 143, 'maiale': 143,
+  'salmone affumicato': 172, 'salmone fresco': 142, 'salmone': 142,
+  'tonno sott\'olio': 198, 'tonno in scatoletta': 103, 'tonno': 103,
+  'merluzzo': 82, 'branzino': 97, 'orata': 109, 'pesce spada': 121,
+  'gamberetti': 99, 'gamberoni': 99,
+  'bresaola': 151, 'bresaola della valtellina': 151,
+  'prosciutto cotto': 136, 'prosciutto crudo': 269, 'prosciutto': 136,
+  'speck': 219, 'pancetta': 337, 'mortadella': 311,
+  'wurstel': 265,
+  // ── Legumi ─────────────────────────────────────────────
+  'ceci cotti': 164, 'ceci': 164,
+  'lenticchie cotte': 116, 'lenticchie': 116,
+  'fagioli cotti': 130, 'fagioli': 130,
+  'edamame': 121,
+  // ── Carboidrati ────────────────────────────────────────
+  'pasta integrale cotta': 140, 'pasta integrale': 340,
+  'pasta cotta': 131, 'pasta': 350,
+  'riso basmati cotto': 130, 'riso basmati': 356,
+  'riso integrale cotto': 111, 'riso integrale': 362,
+  'riso cotto': 130, 'riso': 360,
+  'pane integrale': 241, 'pane in cassetta': 268, 'pane': 265,
+  'focaccia': 295,
+  'fette biscottate integrali': 372, 'fette biscottate': 410,
+  'gallette di riso': 382, 'gallette di mais': 375, 'gallette': 382,
+  'crackers integrali': 395, 'crackers': 430,
+  'avena istantanea': 375, 'fiocchi di avena': 379, 'avena': 379,
+  'farina avena': 389, 'farina integrale': 333, 'farina': 346,
+  'orzo': 354, 'farro': 335, 'quinoa cotta': 120, 'quinoa': 368,
+  'patate dolci': 86, 'patate': 77,
+  'biscotti proteici': 380, 'biscotti secchi': 438, 'biscotti': 450,
+  'cornflakes': 378, 'cereali proteici': 370, 'cereali': 375,
+  'galbusera protein': 362,
+  'tortillas': 304, 'pizza bianca': 271,
+  // ── Verdure ────────────────────────────────────────────
+  'zucchine': 17, 'melanzane': 25, 'peperoni': 31,
+  'carote': 41, 'barbabietola': 43,
+  'spinaci': 23, 'bietola': 20,
+  'broccoli': 34, 'cavolfiore': 25, 'cavolo': 27,
+  'insalata': 15, 'lattuga': 14, 'rucola': 25,
+  'pomodori': 18, 'pomodorini': 20,
+  'cetrioli': 12, 'sedano': 16,
+  'cipolle': 40, 'aglio': 149,
+  'asparagi': 20, 'fagiolini': 31,
+  'funghi': 27, 'funghi champignon': 27,
   'verdure': 25,
-  // Frutta
-  'banana': 89,
-  'mela': 52,
-  'pera': 57,
-  'arancia': 47,
-  'frutto': 60,
-  'frutta': 60,
-  // Condimenti
-  'olio': 884, 'olio evo': 884, 'olio oliva': 884,
-  'miele': 304,
-  'cioccolato': 545, 'cioccolato fondente': 545,
-  'cacao': 354,
-  'frutta secca': 600, 'noci': 654, 'mandorle': 579,
-  // Prodotti confezionati (stima)
-  'galbusera protein': 370,
+  // ── Frutta ─────────────────────────────────────────────
+  'banana': 89, 'mela': 52, 'pera': 57, 'arancia': 47,
+  'mandarino': 53, 'clementina': 47,
+  'kiwi': 61, 'fragole': 33, 'mirtilli': 57,
+  'ananas': 50, 'melone': 34, 'anguria': 30,
+  'uva': 67, 'pesche': 39, 'albicocche': 48,
+  'avocado': 160,
+  'frutto': 55, 'frutta': 55,
+  // ── Grassi & Condimenti ────────────────────────────────
+  'olio evo': 884, 'olio di oliva': 884, 'olio di semi': 884, 'olio': 884,
+  'miele': 304, 'marmellata': 260, 'nutella': 539,
+  'maionese': 680, 'ketchup': 112, 'salsa di soia': 53,
+  // ── Cioccolato & Dolci ─────────────────────────────────
+  'cioccolato fondente 85%': 598, 'cioccolato fondente 70%': 572,
+  'cioccolato fondente': 545, 'cioccolato al latte': 535, 'cioccolato': 535,
+  'cacao amaro': 354, 'cacao': 354,
+  // ── Frutta secca & Semi ────────────────────────────────
+  'mandorle': 579, 'noci': 654, 'nocciole': 628, 'anacardi': 553,
+  'pistacchi': 560, 'pinoli': 673, 'semi di chia': 486,
+  'semi di lino': 534, 'semi di zucca': 559,
+  'arachidi': 567, 'burro di arachidi': 588,
+  'frutta secca': 600,
+  // ── Integratori & Prodotti fitness ─────────────────────
+  'whey protein': 370, 'proteine in polvere': 370,
+  'barretta proteica': 380, 'barretta': 380,
 };
 
 const DEFAULT_GYM = {
@@ -95,7 +136,18 @@ const DEFAULT_GYM = {
   }
 };
 
-// Calcola kcal da stringa alimento es. "150g latte intero" o "2 uova"
+// Chiavi KCAL_DB ordinate per lunghezza decrescente (più specifico vince)
+const KCAL_DB_SORTED = Object.entries(KCAL_DB).sort((a, b) => b[0].length - a[0].length);
+
+// Pesi medi per unità contabili (grammi)
+const PZ_WEIGHTS = {
+  'uova': 60, 'uovo': 60,
+  'banana': 120, 'mela': 160, 'pera': 150, 'arancia': 170,
+  'mandarino': 80, 'kiwi': 80, 'pesche': 130, 'frutto': 150, 'frutta': 150,
+  'biscotti': 10, 'gallette': 10, 'crackers': 8,
+};
+
+// Calcola kcal da stringa alimento es. "150g latte intero", "2 uova", "3 fette pane"
 function calcKcalFromFood(foodStr) {
   if (!foodStr || foodStr === 'Giorno libero' || foodStr === 'Libero') return 0;
 
@@ -106,31 +158,61 @@ function calcKcalFromFood(foodStr) {
   const str = foodStr.toLowerCase().trim();
 
   // Estrai quantità e unità
-  const qtyMatch = str.match(/^(\d+(?:[.,]\d+)?)\s*(g|kg|ml|l|pz|fette?|scatolett[ae]|busta|pacco|pacchetto|porzione)?/i);
+  const qtyMatch = str.match(/^(\d+(?:[.,]\d+)?)\s*(g|kg|ml|l|pz|fett[ae]|scatolett[ae]|bust[ae]|pacco|pacchetto|porzione)?(?:\s|$)/i);
   if (!qtyMatch) return 0;
 
   let qty = parseFloat(qtyMatch[1].replace(',', '.'));
   const unit = (qtyMatch[2] || 'g').toLowerCase();
+  const foodPart = str.slice(qtyMatch[0].length).trim()
+    // rimuovi stopword comuni
+    .replace(/\b(con|al|alla|allo|agli|alle|di|del|della|dello|in|no|senza|magro|magra|intero|intera|fresco|fresca|cotto|cotta)\b/g, ' ')
+    .replace(/\s+/g, ' ').trim();
 
-  // Converti in grammi
-  if (unit === 'kg') qty *= 1000;
-  else if (unit === 'l') qty *= 1000;
-  else if (unit === 'ml') qty = qty; // assume ~1g/ml
-  else if (unit === 'pz' || unit === 'fette' || unit === 'fetta') qty = qty * 50; // stima ~50g per pezzo
-  else if (unit === 'scatolette' || unit === 'scatoletta') qty = qty * 80; // stima 80g per scatoletta
-  else if (unit === 'busta') qty = qty * 100;
-  else if (unit === 'pacco' || unit === 'pacchetto') qty = qty * 100;
-
-  // Cerca il cibo nel database
-  const foodPart = str.replace(qtyMatch[0], '').trim();
-
-  // Prima cerca corrispondenza esatta
-  for (const [key, kcalPer100] of Object.entries(KCAL_DB)) {
-    if (foodPart.includes(key)) {
-      return Math.round((qty * kcalPer100) / 100);
+  // Trova corrispondenza nel DB (chiave più lunga prima = più specifica)
+  let kcalPer100 = 0;
+  for (const [key, val] of KCAL_DB_SORTED) {
+    if (foodPart.includes(key)) { kcalPer100 = val; break; }
+  }
+  // Se non trovato nella foodPart, cerca nell'intera stringa
+  if (!kcalPer100) {
+    for (const [key, val] of KCAL_DB_SORTED) {
+      if (str.includes(key)) { kcalPer100 = val; break; }
     }
   }
+  if (!kcalPer100) kcalPer100 = 150; // fallback generico
 
-  // Fallback: stima generica ~150 kcal per 100g
-  return Math.round((qty * 150) / 100);
+  // Converti unità in grammi
+  if (unit === 'kg') qty *= 1000;
+  else if (unit === 'l') qty *= 1000;
+  else if (unit === 'ml') { /* 1 ml ≈ 1 g per liquidi */ }
+  else if (unit === 'pz') {
+    // Peso variabile in base al cibo
+    let gPerPz = 50;
+    for (const [food, w] of Object.entries(PZ_WEIGHTS)) {
+      if (foodPart.includes(food) || str.includes(food)) { gPerPz = w; break; }
+    }
+    qty *= gPerPz;
+  }
+  else if (unit === 'fetta' || unit === 'fette') {
+    // Fetta di pane ~35g, biscotto ~10g, fetta biscottata ~10g
+    const isBiscuit = foodPart.includes('biscott') || foodPart.includes('gallette') || foodPart.includes('biscottate');
+    qty *= isBiscuit ? 10 : 35;
+  }
+  else if (unit === 'scatoletta' || unit === 'scatolette') {
+    // Tonno sgocciolato ~80g, altri ~120g
+    qty *= (foodPart.includes('tonno') || str.includes('tonno')) ? 80 : 120;
+  }
+  else if (unit === 'busta' || unit === 'buste') {
+    // Salmone affumicato busta ~100g, altri ~100g
+    qty *= 100;
+  }
+  else if (unit === 'pacco' || unit === 'pacchetto') {
+    qty *= 100;
+  }
+  else if (unit === 'porzione') {
+    qty *= 150; // stima generica porzione
+  }
+  // 'g' o nessuna unità: qty già in grammi
+
+  return Math.round((qty * kcalPer100) / 100);
 }
