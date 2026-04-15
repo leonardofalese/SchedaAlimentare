@@ -102,7 +102,7 @@
 
 <h1>Scheda<em>Alimentare</em> · Riferimento Calcoli</h1>
 <div class="sub">Come funziona ogni calcolo — dal parsing degli alimenti alla proiezione obiettivo</div>
-<div class="sub" style="margin-top:4px;font-size:11px">Tutti i pesi sono <strong style="color:var(--orange)">a crudo</strong> per default · Aggiornato al commit attuale</div>
+<div class="sub" style="margin-top:4px;font-size:11px">Tutti i pesi sono <strong style="color:var(--orange)">a crudo</strong> per default · Aggiornato al 2026-04-16 · <span style="color:var(--green)">kcal = P×4 + C×4 + G×9</span></div>
 
 <div class="toc">
   <a href="#s-parser">1. Parser alimenti</a>
@@ -138,9 +138,18 @@ Se nessun numero       → return 0
 <span class="hl">PASSO 3 — Converti unità → grammi</span>
 (vedi tabella sezione 2)
 
-<span class="hl">PASSO 4 — Cerca kcal/100g nel DB, calcola</span>
-kcal = round( grammi × kcal_per_100g / 100 )
-(vedi sezione 3 per il lookup)</div>
+<span class="hl">PASSO 4 — Lookup macros/kcal nel DB</span>
+<span class="hlb">Priorità lookup:</span>
+  1. Se MACRO_DB ha una voce → <span class="hl">kcal = P×4 + C×4 + G×9</span> (formula)
+  2. Altrimenti → cerca KCAL_DB → kcal = grammi × kcal_per_100 / 100
+  3. Fallback: <span class="hlr">150 kcal/100g</span>
+
+<span class="hlb">Soft lookup (nuovo):</span> se nessun match esatto, riprova
+rimuovendo parole dalla fine finché non trova qualcosa.
+  "riso scottato" → no match → riprova "riso" → match ✓
+  "pollo alla piastra" → alias → "petto di pollo" → match ✓
+
+(vedi sezione 3 per la catena completa)</div>
 </div>
 
 <!-- ══════════════════════════════════════════════════════ -->
@@ -153,8 +162,8 @@ kcal = round( grammi × kcal_per_100g / 100 )
     <tr><th>Unità</th><th>Conversione in grammi</th></tr>
     <tr><td class="mono">g</td><td>1:1 (grammi diretti)</td></tr>
     <tr><td class="mono">kg</td><td>× 1000</td></tr>
-    <tr><td class="mono">ml</td><td>× 1 (≈ acqua, latte)</td></tr>
-    <tr><td class="mono">l</td><td>× 1000</td></tr>
+    <tr><td class="mono">ml</td><td>× 1 (acqua, latte…) · <strong style="color:var(--orange)">olio: × 0.92</strong> (densità EVO)</td></tr>
+    <tr><td class="mono">l</td><td>× 1000 · olio: × 920</td></tr>
     <tr><td class="mono">porzione</td><td>× 150g (generica)</td></tr>
     <tr><td class="mono">busta / buste</td><td>× 100g</td></tr>
   </table>
@@ -173,20 +182,20 @@ kcal = round( grammi × kcal_per_100g / 100 )
 
 <div class="two-col">
 <div class="card">
-  <h3>Pezzi (pz) · PZ_WEIGHTS</h3>
+  <h3>Pezzi (pz) · PZ_WEIGHTS <span style="font-size:10px;font-weight:400;color:var(--mid)">(porzione edibile, senza buccia/guscio/nocciolo)</span></h3>
   <table>
-    <tr><th>Alimento</th><th>g/pz</th></tr>
-    <tr><td>uova / uovo</td><td class="num">60g</td></tr>
-    <tr><td>banana</td><td class="num">120g</td></tr>
-    <tr><td>mela</td><td class="num">160g</td></tr>
-    <tr><td>pera</td><td class="num">150g</td></tr>
-    <tr><td>arancia</td><td class="num">170g</td></tr>
-    <tr><td>mandarino / kiwi</td><td class="num">80g</td></tr>
-    <tr><td>pesche</td><td class="num">130g</td></tr>
-    <tr><td>frutto (generico)</td><td class="num">150g</td></tr>
-    <tr><td>biscotti / gallette</td><td class="num">10g</td></tr>
-    <tr><td>crackers</td><td class="num">8g</td></tr>
-    <tr><td>altro (default)</td><td class="num">50g</td></tr>
+    <tr><th>Alimento</th><th>g/pz</th><th>Note</th></tr>
+    <tr><td>uova / uovo</td><td class="num">50g</td><td class="note">uovo L sgusciato</td></tr>
+    <tr><td>banana</td><td class="num">95g</td><td class="note">media senza buccia</td></tr>
+    <tr><td>mela / pera</td><td class="num">140g</td><td class="note">al netto del torsolo</td></tr>
+    <tr><td>arancia</td><td class="num">130g</td><td class="note">senza buccia</td></tr>
+    <tr><td>mandarino</td><td class="num">60g</td><td class="note">senza buccia</td></tr>
+    <tr><td>kiwi</td><td class="num">70g</td><td class="note">senza pelle</td></tr>
+    <tr><td>pesche</td><td class="num">115g</td><td class="note">senza nocciolo</td></tr>
+    <tr><td>frutto (generico)</td><td class="num">120g</td><td class="note">fallback</td></tr>
+    <tr><td>biscotti / gallette</td><td class="num">10g</td><td class="note"></td></tr>
+    <tr><td>crackers</td><td class="num">8g</td><td class="note"></td></tr>
+    <tr><td>altro (default)</td><td class="num">50g</td><td class="note"></td></tr>
   </table>
 </div>
 <div>
@@ -215,35 +224,76 @@ kcal = round( grammi × kcal_per_100g / 100 )
 <h2 id="s-lookup">3 · Lookup nel database (come trova l'alimento)</h2>
 
 <div class="card">
-  <h3>Ordine di ricerca — 3 tentativi</h3>
-  <div class="formula"><span class="hl">foodRaw</span>   = stringa dopo la quantità, con tutti gli aggettivi
-           es. "250g macinato manzo magro" → foodRaw = "macinato manzo magro"
+  <h3>Catena di lookup completa — 5 livelli</h3>
+  <div class="formula"><span class="hl">foodRaw</span>     = stringa dopo la quantità, tutti gli aggettivi inclusi
+             es. "250g macinato manzo magro" → "macinato manzo magro"
 
-<span class="hl">foodClean</span> = foodRaw senza stopword connettive (con/al/di/della/del/no/senza…)
-           es. "pasta al pomodoro" → foodClean = "pasta  pomodoro"
+<span class="hl">foodClean</span>   = foodRaw senza stopword connettive
+             es. "pasta al pomodoro" → "pasta pomodoro"
 
-<span class="hl">Tentativo 1:</span> cerca foodRaw nel DB
-<span class="hl">Tentativo 2:</span> cerca foodClean nel DB
-<span class="hl">Tentativo 3:</span> cerca l'intera stringa originale (str)
-<span class="hlr">Fallback:    150 kcal/100g</span> se nessun match trovato</div>
+<span class="hl">foodAliased</span> = foodClean normalizzato tramite ALIASES
+             es. "olio extravergine" → "olio evo"
+             es. "fage" → "yogurt greco 0%"
+
+<span class="hlb">Livello 1:</span> MACRO_DB(foodRaw)    → kcal = <span class="hl">P×4 + C×4 + G×9</span>
+<span class="hlb">Livello 2:</span> MACRO_DB(foodClean)
+<span class="hlb">Livello 3:</span> MACRO_DB(foodAliased)
+<span class="hlb">Livello 4:</span> MACRO_DB(str)         (stringa originale)
+  → se trovato: kcal dalla formula, macro disponibili
+
+<span class="hlo">Livello 5:</span> KCAL_DB(foodRaw/Clean/Aliased/str) → kcal dirette (no macro)
+<span class="hlr">Fallback:  150 kcal/100g</span>
+
+Ogni livello usa <span class="hl">soft lookup</span>: se nessun match esatto,
+rimuove l'ultima parola e riprova fino a un singolo token.
+  "riso scottato" → no match → "riso" → 356 kcal ✓
+  "pollo al vapore" → alias → "petto di pollo" → match ✓</div>
 
   <h3 style="margin-top:14px">Priorità: chiave più lunga vince</h3>
-  <div class="formula">KCAL_DB_SORTED = Object.entries(KCAL_DB).sort((a,b) => b[0].length - a[0].length)
+  <div class="formula">MACRO_DB_SORTED / KCAL_DB_SORTED = sorted by key.length DESC
 
 Esempio con "pasta integrale":
-  Chiave "pasta integrale" (16 char)  → 340 kcal ✓  cercata PRIMA
-  Chiave "pasta"            (5 char)  → 350 kcal    sarebbe sbagliata se trovata prima
+  "pasta integrale" (16 char) → {p:13.5, c:67, g:2.5} → <span class="hl">kcal=67×4+13.5×4+2.5×9=360</span>
+  "pasta"           (5 char)  → {p:13,   c:72, g:1.5} → 366 kcal (trovata dopo, ignorata)
 
 Esempio con "macinato manzo magro":
-  "macinato manzo magro" (20 char) → 178 kcal ✓
-  "macinato manzo"       (14 char) → 248 kcal
-  "macinato"             (8 char)  → 248 kcal
-  Differenza: <span class="hlo">180 kcal su 250g — il match specifico è fondamentale</span></div>
+  "macinato manzo magro" (20 char) → {p:20, c:0, g:9} → <span class="hl">P×4+G×9 = 80+81 = 161 kcal</span>
+  "macinato manzo"       (14 char) → {p:17, c:0, g:20} → 248 kcal (sbagliato)
+  Differenza su 250g: <span class="hlo">~215 kcal — il match specifico è fondamentale</span></div>
+</div>
+
+<div class="two-col">
+<div class="card card-blue">
+  <h3>Soft lookup — parola per parola</h3>
+  <div class="formula"><span class="hlb">_macroLookupSoft(str):</span>
+  1. Prova str completo
+  2. Rimuove ultima parola, riprova
+  3. …fino a singolo token
+
+  "riso scottato"     → 0 → "riso"       → match
+  "salmone al limone" → 0 → "salmone al" → 0 → "salmone" → match
+  "pollo xxx yyy"     → 0 → "pollo xxx"  → 0 → "pollo"   → match</div>
+</div>
+<div class="card card-orange">
+  <h3>ALIASES — ~70 voci</h3>
+  <div style="font-size:12px;color:var(--mid);line-height:1.8">
+    <strong style="color:var(--text)">Formato:</strong> alias → chiave canonica del DB<br>
+    <strong style="color:var(--text)">Esempi:</strong><br>
+    <code>'evo'</code> → <code>'olio evo'</code><br>
+    <code>'fage'</code> → <code>'yogurt greco 0%'</code><br>
+    <code>'wurst'</code> → <code>'wurstel'</code><br>
+    <code>'skyr'</code> → <code>'yogurt greco 0%'</code><br>
+    <code>'hamburger'</code> → <code>'macinato manzo'</code><br>
+    <code>'filetto'</code> → <code>'bistecca di manzo'</code><br>
+    <code>'passata'</code> → <code>'pomodori'</code><br>
+    Ordinati per lunghezza DESC → il più specifico vince.
+  </div>
+</div>
 </div>
 
 <div class="info-box info">
   <strong>Stopwords rimosse per foodClean:</strong> con · al · alla · allo · agli · alle · di · del · della · dello · in · no · senza · e<br>
-  <strong>NON rimosse:</strong> aggettivi come "magro", "integrale", "affumicato" — servono per matchare voci specifiche del DB.
+  <strong>NON rimosse:</strong> aggettivi come "magro", "integrale", "affumicato" — cambiano il match nel DB.
 </div>
 
 <!-- ══════════════════════════════════════════════════════ -->
@@ -283,10 +333,10 @@ Esempio con "macinato manzo magro":
   <div class="ex-input">"1 frutto"</div>
   <div class="ex-steps">
     Regex → qty=<span>1</span>, unit=<span>pz</span>, foodRaw=<span>"frutto"</span><br>
-    PZ_WEIGHTS["frutto"] = <span>150g</span><br>
-    Lookup: "frutto" → <span>55 kcal/100g</span>
+    PZ_WEIGHTS["frutto"] = <span>120g</span> (aggiornato)<br>
+    MACRO_DB: "frutto" → {p:0.7, c:13, g:0.2} → <span>kcal = 0.7×4+13×4+0.2×9 = 56 kcal/100g</span>
   </div>
-  <div class="ex-result">= 83 kcal</div>
+  <div class="ex-result">= 67 kcal</div>
 </div>
 
 <div class="example">
@@ -313,10 +363,30 @@ Esempio con "macinato manzo magro":
   <div class="ex-input">"10g olio"</div>
   <div class="ex-steps">
     Regex → qty=<span>10g</span>, foodRaw=<span>"olio"</span><br>
-    Lookup: "olio evo" (8ch) cercato prima — ma "olio" da solo → match "olio" → <span>884 kcal/100g</span><br>
-    <span class="warn-span">⚠ L'olio è 8.84 kcal/g — 10g sembrano pochi ma fanno 88 kcal</span>
+    MACRO_DB: "olio" → {p:0, c:0, g:100} → <span>kcal = 0+0+100×9 = 900 kcal/100g</span><br>
+    <span class="warn-span">⚠ L'olio è 9 kcal/g da formula grassi puri — 10g = 90 kcal</span>
   </div>
-  <div class="ex-result">= 88 kcal</div>
+  <div class="ex-result">= 90 kcal</div>
+</div>
+
+<div class="example">
+  <div class="ex-input">"10ml olio evo"</div>
+  <div class="ex-steps">
+    Regex → qty=<span>10</span>, unit=<span>ml</span>, foodRaw=<span>"olio evo"</span><br>
+    Densità olio: 10 ml × 0.92 = <span>9.2g</span><br>
+    MACRO_DB: "olio evo" → {p:0, c:0, g:100} → kcal/100g = 900<br>
+  </div>
+  <div class="ex-result">= 83 kcal (vs 90 senza densità)</div>
+</div>
+
+<div class="example">
+  <div class="ex-input">"200g riso scottato"</div>
+  <div class="ex-steps">
+    Regex → qty=<span>200g</span>, foodRaw=<span>"riso scottato"</span><br>
+    MACRO_DB("riso scottato") → <span>no match</span><br>
+    Soft lookup: rimuove "scottato" → MACRO_DB("riso") → {p:7, c:79, g:0.7} → <span>kcal = 7×4+79×4+0.7×9 = 350 kcal/100g</span>
+  </div>
+  <div class="ex-result">= 700 kcal</div>
 </div>
 
 <div class="example">
@@ -332,6 +402,9 @@ Esempio con "macinato manzo magro":
 
 <div class="info-box good">
   <strong>Fonte:</strong> USDA FoodData Central + INRAN · Tutti i valori si riferiscono al peso a crudo, salvo indicazione nella colonna Note.
+</div>
+<div class="info-box warn">
+  <strong>Nota tecnica:</strong> le kcal visualizzate nell'app non vengono più lette da questa tabella. Per gli alimenti presenti in <code>MACRO_DB</code> (~120 voci), le kcal sono calcolate dinamicamente con <strong>P×4 + C×4 + G×9</strong>. I valori qui sono un riferimento di ordine di grandezza. Per gli alimenti senza macros, le kcal vengono da questa tabella (fallback).
 </div>
 
 <div class="search-wrap">
@@ -357,7 +430,7 @@ Esempio con "macinato manzo magro":
     <tr><td>panna</td><td class="num">337</td><td class="note"></td></tr>
 
     <tr class="cat-hdr"><td colspan="3">Proteine animali</td></tr>
-    <tr><td>uova intere</td><td class="num">155</td><td class="note">60g/pz</td></tr>
+    <tr><td>uova intere</td><td class="num">155</td><td class="note">50g/pz (sgusciato, USDA large)</td></tr>
     <tr><td>albume</td><td class="num">52</td><td class="note"></td></tr>
     <tr><td>tuorlo</td><td class="num">322</td><td class="note"></td></tr>
     <tr><td>petto di pollo</td><td class="num">110</td><td class="note">crudo</td></tr>
@@ -441,18 +514,18 @@ Esempio con "macinato manzo magro":
     <tr><td>verdure (generico)</td><td class="num">25</td><td class="note">fallback</td></tr>
 
     <tr class="cat-hdr"><td colspan="3">Frutta</td></tr>
-    <tr><td>banana</td><td class="num">89</td><td class="note">120g/pz</td></tr>
-    <tr><td>mela</td><td class="num">52</td><td class="note">160g/pz</td></tr>
-    <tr><td>pera</td><td class="num">57</td><td class="note">150g/pz</td></tr>
-    <tr><td>arancia</td><td class="num">47</td><td class="note">170g/pz</td></tr>
-    <tr><td>kiwi</td><td class="num">61</td><td class="note">80g/pz</td></tr>
+    <tr><td>banana</td><td class="num">89</td><td class="note">95g/pz (senza buccia)</td></tr>
+    <tr><td>mela</td><td class="num">52</td><td class="note">140g/pz (senza torsolo)</td></tr>
+    <tr><td>pera</td><td class="num">57</td><td class="note">140g/pz (senza torsolo)</td></tr>
+    <tr><td>arancia</td><td class="num">47</td><td class="note">130g/pz (senza buccia)</td></tr>
+    <tr><td>kiwi</td><td class="num">61</td><td class="note">70g/pz (senza pelle)</td></tr>
     <tr><td>fragole</td><td class="num">33</td><td class="note"></td></tr>
     <tr><td>mirtilli</td><td class="num">57</td><td class="note"></td></tr>
     <tr><td>avocado</td><td class="num">160</td><td class="note"></td></tr>
     <tr><td>ananas</td><td class="num">50</td><td class="note"></td></tr>
     <tr><td>uva</td><td class="num">67</td><td class="note"></td></tr>
-    <tr><td>pesche</td><td class="num">39</td><td class="note">130g/pz</td></tr>
-    <tr><td>frutto (generico)</td><td class="num">55</td><td class="note">150g/pz · fallback</td></tr>
+    <tr><td>pesche</td><td class="num">39</td><td class="note">115g/pz (senza nocciolo)</td></tr>
+    <tr><td>frutto (generico)</td><td class="num">55</td><td class="note">120g/pz · fallback</td></tr>
 
     <tr class="cat-hdr"><td colspan="3">Grassi e condimenti</td></tr>
     <tr><td>olio evo / olio di oliva / olio</td><td class="num">884</td><td class="note">8.84 kcal/g — 10g = 88 kcal</td></tr>
@@ -662,8 +735,20 @@ Chiave gym:    "gym_d{dayIndex}_{exIndex}" es. "gym_d1_2"</div>
   <div class="formula"><span class="hl">Alimentazione:</span>
   BMR     = Mifflin-St Jeor con profilo utente
   TDEE    = BMR × actMult (include palestra)
+           <span class="hlb">oppure TDEE_calibrato se ≥14 giorni di weightLog</span>
   Scheda  = media kcal giorni attivi della scheda
   Bilancio= Scheda − TDEE (kcal/die)
+
+<span class="hl">Calibrazione TDEE (≥14 giorni):</span>
+  TDEE_reale = avgKcal − (Δkg × 7700 / giorni)
+  Sostituisce il TDEE teorico come fonte di verità.
+  Mostrato con badge "✓ calibrato" nel tracker.
+
+<span class="hlo">Alert divergenza (checkTDEEDivergence):</span>
+  Se |bilancio_teorico − bilancio_reale| / bilancio_reale &gt; 15%
+  → banner arancio con i valori e suggerimento.
+  Bilancio_reale = (Δkg × 7700) / giorni
+  Attivo dopo ≥5 misure e ≥7 giorni di distanza.
 
 <span class="hlb">Palestra:</span>
   Sessioni/sett = giorni con esercizi (nome ≠ riposo)
@@ -735,6 +820,50 @@ Chiave gym:    "gym_d{dayIndex}_{exIndex}" es. "gym_d1_2"</div>
   <div class="improve-body">
     <code>ALIASES</code>: ~45 voci che mappano varianti di scrittura alla chiave canonica del DB (es. <code>'wurst'→'wurstel'</code>, <code>'carne macinata'→'macinato manzo'</code>, <code>'olio extravergine'→'olio evo'</code>, <code>'skyr'→'yogurt greco 0%'</code>).
     <br><code>_aliasNormalize(str)</code> applicata come passo intermedio nel lookup — <em>foodRaw → foodClean → foodAliased → str → 150 kcal fallback</em>.
+  </div>
+</div>
+
+<div class="improve-card" style="border-color:rgba(184,245,102,.25);background:rgba(184,245,102,.04)">
+  <div class="improve-title">
+    ✓ Formula kcal = P×4 + C×4 + G×9 come unica fonte di verità
+    <span class="priority p-high" style="background:rgba(184,245,102,.15);color:var(--green)">Implementato</span>
+  </div>
+  <div class="improve-body">
+    <code>_kcalFromMacros(m)</code>: calcola le kcal dai macros. Priorità in <code>calcKcalFromFood</code> e <code>calcMacrosFromFood</code>: se <code>MACRO_DB</code> ha una voce, le kcal vengono dalla formula — non da <code>KCAL_DB</code>. Questo elimina le discrepanze tra i due database.
+    <br><code>KCAL_DB</code> diventa fallback solo per voci senza macros.
+  </div>
+</div>
+
+<div class="improve-card" style="border-color:rgba(184,245,102,.25);background:rgba(184,245,102,.04)">
+  <div class="improve-title">
+    ✓ Soft lookup — ignora aggettivi sconosciuti
+    <span class="priority p-high" style="background:rgba(184,245,102,.15);color:var(--green)">Implementato</span>
+  </div>
+  <div class="improve-body">
+    <code>_dbLookupSoft(str)</code> / <code>_macroLookupSoft(str)</code>: se nessun match esatto, rimuove l'ultima parola e riprova iterativamente.
+    <br>Es: "riso scottato" → nessun match → "riso" → match. Riduce i fallback a 150 kcal per voci con modificatori ignoti.
+  </div>
+</div>
+
+<div class="improve-card" style="border-color:rgba(184,245,102,.25);background:rgba(184,245,102,.04)">
+  <div class="improve-title">
+    ✓ Correzione densità olio per ml + PZ_WEIGHTS reali
+    <span class="priority p-med" style="background:rgba(184,245,102,.15);color:var(--green)">Implementato</span>
+  </div>
+  <div class="improve-body">
+    In <code>_parseFoodGrams</code>: se unit=<code>ml</code> e food contiene "olio" → qty × 0.92 (densità EVO ≈ 0.92 g/ml).<br>
+    <code>PZ_WEIGHTS</code> aggiornati con pesi edibili reali: uovo 50g (sgusciato), banana 95g, mela/pera 140g, arancia 130g, mandarino 60g, kiwi 70g, pesche 115g.
+  </div>
+</div>
+
+<div class="improve-card" style="border-color:rgba(184,245,102,.25);background:rgba(184,245,102,.04)">
+  <div class="improve-title">
+    ✓ Alert divergenza TDEE + calibrazione a 14 giorni
+    <span class="priority p-med" style="background:rgba(184,245,102,.15);color:var(--green)">Implementato</span>
+  </div>
+  <div class="improve-body">
+    <code>checkTDEEDivergence()</code>: confronta bilancio teorico (Mifflin) con quello implicito dal <code>weightLog</code>. Se la divergenza supera il 15%, mostra un banner arancio nel tracker con i valori numerici e la direzione dell'errore.<br>
+    <code>calcCalibratedTDEE()</code>: soglia alzata a 14 giorni — dopo 14 misure il TDEE calibrato diventa l'unica fonte di verità e sostituisce completamente il valore Mifflin.
   </div>
 </div>
 
