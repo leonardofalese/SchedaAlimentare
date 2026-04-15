@@ -220,57 +220,81 @@ function renderTrackerAnalytics() {
       <div class="analytics-stat${balClass}"><div class="analytics-stat-val">${balText}</div><div class="analytics-stat-label">Bilancio</div></div>
     </div>`;
 
-    if (pd.obiettivo && pd.obiettivo !== 'mantenere' && pd.pesoObiettivo && pd.peso && balance !== null && Math.abs(balance) > 50) {
-      const kgDiff      = parseFloat(Math.abs(pd.peso - pd.pesoObiettivo).toFixed(1));
-      const daysNeeded  = Math.round((kgDiff * 7700) / Math.abs(balance));
-      const weeksNeeded = Math.round(daysNeeded / 7);
-      const timeStr     = weeksNeeded <= 12 ? weeksNeeded + ' settimane' : (weeksNeeded / 4.3).toFixed(1) + ' mesi';
-      const dirLabel    = pd.obiettivo === 'dimagrire' ? 'Da perdere' : 'Da guadagnare';
-      const onTrack     = (pd.obiettivo === 'dimagrire' && balance < 0) || (pd.obiettivo === 'massa' && balance > 0);
+    if (pd.obiettivo && pd.obiettivo !== 'mantenere' && pd.pesoObiettivo && pd.peso && balance !== null) {
+      const kgDiff   = parseFloat(Math.abs(pd.peso - pd.pesoObiettivo).toFixed(1));
+      const dirLabel = pd.obiettivo === 'dimagrire' ? 'Da perdere' : 'Da guadagnare';
+      const onTrack  = (pd.obiettivo === 'dimagrire' && balance < 0) || (pd.obiettivo === 'massa' && balance > 0);
 
-      // Gym-aware breakdown
-      let gymProjNote = '';
-      if (hasGymData && trainingDays >= 2) {
-        if (pd.obiettivo === 'massa') {
-          // Natural max muscle gain based on training frequency
-          const maxKgPerMonth = trainingDays >= 5 ? 1.0 : trainingDays >= 3 ? 0.7 : 0.5;
-          const totalMonths   = parseFloat((weeksNeeded / 4.3).toFixed(1));
-          const estMuscle     = parseFloat(Math.min(maxKgPerMonth * totalMonths, kgDiff * 0.65).toFixed(1));
-          const estFat        = parseFloat(Math.max(kgDiff - estMuscle, 0).toFixed(1));
-          gymProjNote = `<div class="analytics-gym-proj">
-            <div class="analytics-gym-proj-title">Composizione stimata del gain</div>
-            <div class="analytics-gym-proj-row"><span>Massa muscolare</span><strong class="analytics-green">+${estMuscle} kg</strong></div>
-            <div class="analytics-gym-proj-row"><span>Grasso corporeo</span><strong>+${estFat} kg</strong></div>
-            <div class="analytics-gym-proj-note">${trainingDays} sessioni/sett · max ~${maxKgPerMonth} kg muscolo/mese</div>
-          </div>`;
-        } else if (pd.obiettivo === 'dimagrire') {
-          // With training: ~80% fat loss, ~20% lean mass (much better than without)
-          const estFatLoss  = parseFloat((kgDiff * 0.82).toFixed(1));
-          const estLeanLoss = parseFloat((kgDiff * 0.18).toFixed(1));
-          gymProjNote = `<div class="analytics-gym-proj">
-            <div class="analytics-gym-proj-title">Composizione stimata della perdita</div>
-            <div class="analytics-gym-proj-row"><span>Grasso perso</span><strong class="analytics-green">−${estFatLoss} kg</strong></div>
-            <div class="analytics-gym-proj-row"><span>Massa magra</span><strong>−${estLeanLoss} kg</strong></div>
-            <div class="analytics-gym-proj-note">${trainingDays} sessioni/sett · l'allenamento preserva la massa muscolare</div>
-          </div>`;
-        }
+      let timeStr = '—', weeksNeeded = 0, gymProjNote = '';
+
+      if (pd.obiettivo === 'massa') {
+        // ── MASSA: il limite è fisiologico, non calorico ──────────────────
+        // Il ritmo di crescita muscolare dipende dalla frequenza + volume di allenamento
+        let kgPerMonth = 0.25; // minimo senza allenamento
+        if (trainingDays >= 1) kgPerMonth = 0.40;
+        if (trainingDays >= 3) kgPerMonth = 0.60;
+        if (trainingDays >= 4) kgPerMonth = 0.75;
+        if (trainingDays >= 5) kgPerMonth = 0.90;
+        // Bonus volume: chi solleva molto (alto kg × serie × rip) cresce leggermente prima
+        if (totalVol >= 5000)  kgPerMonth = Math.min(kgPerMonth + 0.08, 1.2);
+        if (totalVol >= 15000) kgPerMonth = Math.min(kgPerMonth + 0.10, 1.5);
+
+        const monthsNeeded = kgDiff / kgPerMonth;
+        weeksNeeded = Math.round(monthsNeeded * 4.3);
+        timeStr = monthsNeeded <= 3 ? Math.round(weeksNeeded) + ' settimane'
+                : monthsNeeded < 12 ? monthsNeeded.toFixed(1) + ' mesi'
+                : (monthsNeeded / 12).toFixed(1) + ' anni';
+
+        // Composizione del gain
+        const muscleRatio = trainingDays >= 4 ? 0.70 : trainingDays >= 2 ? 0.60 : 0.45;
+        const estMuscle   = parseFloat((kgDiff * muscleRatio).toFixed(1));
+        const estFat      = parseFloat((kgDiff * (1 - muscleRatio)).toFixed(1));
+        gymProjNote = `<div class="analytics-gym-proj">
+          <div class="analytics-gym-proj-title">Composizione stimata del gain</div>
+          <div class="analytics-gym-proj-row"><span>Massa muscolare</span><strong class="analytics-green">+${estMuscle} kg</strong></div>
+          <div class="analytics-gym-proj-row"><span>Grasso corporeo</span><strong>+${estFat} kg</strong></div>
+          <div class="analytics-gym-proj-note">${trainingDays} sessioni/sett · ~${kgPerMonth.toFixed(2)} kg/mese · volume ${totalVol > 0 ? Math.round(totalVol)+'kg/sett' : 'non registrato'}</div>
+        </div>`;
+        if (!onTrack) gymProjNote += `<div class="analytics-warn">⚠ Serve un surplus calorico per supportare la crescita muscolare</div>`;
+
+      } else if (pd.obiettivo === 'dimagrire' && Math.abs(balance) > 50) {
+        // ── DIMAGRIRE: formula calorica (7700 kcal = 1kg grasso) ─────────
+        // Più palestra → TDEE più alto → deficit più grande → più veloce
+        const deficit     = Math.abs(balance); // kcal/die
+        const daysNeeded  = Math.round((kgDiff * 7700) / deficit);
+        weeksNeeded       = Math.round(daysNeeded / 7);
+        timeStr = weeksNeeded <= 12 ? weeksNeeded + ' settimane'
+                : (weeksNeeded / 4.3).toFixed(1) + ' mesi';
+
+        // Con allenamento si preserva più massa magra
+        const fatRatio    = trainingDays >= 3 ? 0.84 : trainingDays >= 1 ? 0.78 : 0.65;
+        const estFatLoss  = parseFloat((kgDiff * fatRatio).toFixed(1));
+        const estLeanLoss = parseFloat((kgDiff * (1 - fatRatio)).toFixed(1));
+        gymProjNote = `<div class="analytics-gym-proj">
+          <div class="analytics-gym-proj-title">Composizione stimata della perdita</div>
+          <div class="analytics-gym-proj-row"><span>Grasso perso</span><strong class="analytics-green">−${estFatLoss} kg</strong></div>
+          <div class="analytics-gym-proj-row"><span>Massa magra</span><strong>−${estLeanLoss} kg</strong></div>
+          <div class="analytics-gym-proj-note">${trainingDays} sessioni/sett · deficit ${Math.round(deficit)} kcal/die</div>
+        </div>`;
+        if (!onTrack) gymProjNote += `<div class="analytics-warn">⚠ Bilancio in surplus: riduci le calorie o aumenta l'attività</div>`;
       }
 
-      projHTML = `<div class="analytics-card">
-        <div class="analytics-card-title">Proiezione obiettivo</div>
-        <div class="analytics-proj-row">
-          <div><div class="analytics-proj-label">Peso attuale</div><div class="analytics-proj-val">${pd.peso} kg</div></div>
-          <div class="analytics-proj-arrow">→</div>
-          <div><div class="analytics-proj-label">Obiettivo</div><div class="analytics-proj-val analytics-green">${pd.pesoObiettivo} kg</div></div>
-        </div>
-        <div class="analytics-proj-info">
-          <span>${dirLabel}: <strong>${kgDiff} kg</strong></span>
-          <span>Stima: <strong class="analytics-green">${timeStr}</strong></span>
-        </div>
-        ${!onTrack ? '<div class="analytics-warn">⚠ Bilancio non allineato con l\'obiettivo</div>' : ''}
-        ${gymProjNote}
-        <canvas id="projectionChart" height="90"></canvas>
-      </div>`;
+      if (timeStr !== '—') {
+        projHTML = `<div class="analytics-card">
+          <div class="analytics-card-title">Proiezione obiettivo</div>
+          <div class="analytics-proj-row">
+            <div><div class="analytics-proj-label">Peso attuale</div><div class="analytics-proj-val">${pd.peso} kg</div></div>
+            <div class="analytics-proj-arrow">→</div>
+            <div><div class="analytics-proj-label">Obiettivo</div><div class="analytics-proj-val analytics-green">${pd.pesoObiettivo} kg</div></div>
+          </div>
+          <div class="analytics-proj-info">
+            <span>${dirLabel}: <strong>${kgDiff} kg</strong></span>
+            <span>Stima: <strong class="analytics-green">${timeStr}</strong></span>
+          </div>
+          ${gymProjNote}
+          <canvas id="projectionChart" height="90"></canvas>
+        </div>`;
+      }
     }
   }
 
@@ -424,20 +448,39 @@ function renderTrackerAnalytics() {
     }
 
     // Projection line chart
-    if (pd?.pesoObiettivo && pd?.peso) {
+    if (pd?.pesoObiettivo && pd?.peso && pd?.obiettivo && pd.obiettivo !== 'mantenere') {
       const pCtx = document.getElementById('projectionChart')?.getContext('2d');
-      const bmr2 = calcBMR(pd);
-      const tdee2 = bmr2 ? Math.round(bmr2 * 1.55) : 0;
-      const avg2 = calcAvgDailyKcal();
-      const bal2 = avg2 - tdee2;
-      if (pCtx && Math.abs(bal2) > 50 && typeof Chart !== 'undefined') {
-        const kgDiff2 = Math.abs(pd.peso - pd.pesoObiettivo);
-        const weeksMax = Math.min(Math.round((kgDiff2 * 7700) / (Math.abs(bal2) * 7)) + 1, 60);
-        const pts = Array.from({length: weeksMax+1}, (_,i) => {
-          const kg = pd.peso + (bal2 / 7700) * 7 * i;
-          return parseFloat(kg.toFixed(1));
+      const kgDiff2 = Math.abs(pd.peso - pd.pesoObiettivo);
+      let weeksMax = 0, pts = [];
+
+      if (pd.obiettivo === 'massa') {
+        // Usa lo stesso tasso mensile calcolato sopra (fisiologico)
+        let kgPerMonth2 = 0.25;
+        if (trainingDays >= 1) kgPerMonth2 = 0.40;
+        if (trainingDays >= 3) kgPerMonth2 = 0.60;
+        if (trainingDays >= 4) kgPerMonth2 = 0.75;
+        if (trainingDays >= 5) kgPerMonth2 = 0.90;
+        if (totalVol >= 5000)  kgPerMonth2 = Math.min(kgPerMonth2 + 0.08, 1.2);
+        if (totalVol >= 15000) kgPerMonth2 = Math.min(kgPerMonth2 + 0.10, 1.5);
+        const kgPerWeek2 = kgPerMonth2 / 4.3;
+        weeksMax = Math.min(Math.ceil(kgDiff2 / kgPerWeek2) + 1, 120);
+        pts = Array.from({length: weeksMax+1}, (_,i) => {
+          return parseFloat(Math.min(pd.peso + kgPerWeek2 * i, pd.pesoObiettivo).toFixed(1));
         });
-        const lbls = pts.map((_,i) => i===0 ? 'Oggi' : i===weeksMax ? 'Traguardo' : i%4===0 ? i+'w' : '');
+      } else {
+        // dimagrire: usa il bilancio calorico reale con TDEE palestra
+        const bal2 = balance; // già calcolato con actMult
+        if (Math.abs(bal2) > 50) {
+          weeksMax = Math.min(Math.round((kgDiff2 * 7700) / (Math.abs(bal2) * 7)) + 1, 120);
+          pts = Array.from({length: weeksMax+1}, (_,i) => {
+            const kg = pd.peso + (bal2 / 7700) * 7 * i;
+            return parseFloat(kg.toFixed(1));
+          });
+        }
+      }
+
+      if (pCtx && pts.length > 1 && typeof Chart !== 'undefined') {
+        const lbls = pts.map((_,i) => i===0 ? 'Oggi' : i===weeksMax ? 'Traguardo' : i%4===0 ? Math.round(i/4.3)+'m' : '');
         _chartProjection = new Chart(pCtx, {
           type: 'line',
           data: {
