@@ -85,7 +85,11 @@ async function doLogout() {
     meals: {},
     shop: {},
     mealData: JSON.parse(JSON.stringify(DEFAULT_MEALS)),
-    shopData: JSON.parse(JSON.stringify(DEFAULT_SHOP))
+    shopData: JSON.parse(JSON.stringify(DEFAULT_SHOP)),
+    gymData: JSON.parse(JSON.stringify(DEFAULT_GYM)),
+    gymLog: {},
+    profileData: null,
+    schedaLoadedAt: null
   };
   currentDay = today;
   settingsDay = 0;

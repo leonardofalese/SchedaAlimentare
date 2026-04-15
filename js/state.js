@@ -4,8 +4,10 @@ let state = {
   shop: {},
   mealData: JSON.parse(JSON.stringify(DEFAULT_MEALS)),
   shopData: JSON.parse(JSON.stringify(DEFAULT_SHOP)),
+  gymData: JSON.parse(JSON.stringify(DEFAULT_GYM)),
+  gymLog: {},
   profileData: null,
   schedaLoadedAt: null
 };
 let today = new Date().getDay(); today = today===0?6:today-1;
-let currentDay = today, timerInt = null, settingsDay = 0;
+let currentDay = today, timerInt = null, settingsDay = 0, gymDay = 0;

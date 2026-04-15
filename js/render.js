@@ -461,3 +461,68 @@ function saveShop() {
   });
   save(); renderShop(); showToast('Lista salvata!');
 }
+
+// ── GYM VIEW ──────────────────────────────────────────────
+const gymLogKey = (d,i) => `g${d}_${i}`;
+const isGymDone = (d,i) => !!state.gymLog[gymLogKey(d,i)];
+
+function toggleGymEx(d,i) {
+  state.gymLog[gymLogKey(d,i)] = !isGymDone(d,i);
+  save();
+  renderGymExercises();
+}
+
+function renderGymDayTabs() {
+  document.getElementById('gymDayTabs').innerHTML = GIORNI_SHORT.map((g,i) => {
+    const has = (state.gymData.giorni[i]?.esercizi||[]).length > 0;
+    return `<button class="day-tab ${i===gymDay?'active':''} ${has&&i!==gymDay?'has-activity':''}" onclick="selectGymDay(${i})">${g}</button>`;
+  }).join('');
+}
+
+function selectGymDay(i) { gymDay=i; renderGymDayTabs(); renderGymExercises(); }
+
+function renderGymExercises() {
+  const dayData = state.gymData.giorni[gymDay] || {};
+  const nome = dayData.nome || '';
+  const esercizi = dayData.esercizi || [];
+
+  const nameEl = document.getElementById('gymDayName');
+  nameEl.innerHTML = nome && nome.toLowerCase() !== 'riposo'
+    ? `<div class="gym-day-title">${nome}</div>` : '';
+
+  const exEl = document.getElementById('gymExercises');
+  if (esercizi.length === 0) {
+    exEl.innerHTML = `<div class="gym-empty">${nome.toLowerCase()==='riposo'?'🛌 Giorno di riposo':'Nessun esercizio per questo giorno'}</div>`;
+    return;
+  }
+
+  const doneCnt = esercizi.filter((_,i) => isGymDone(gymDay,i)).length;
+  exEl.innerHTML = `
+    <div class="gym-progress">
+      <div class="gym-prog-bar"><div class="gym-prog-fill" style="width:${esercizi.length?Math.round(doneCnt/esercizi.length*100):0}%"></div></div>
+      <span class="gym-prog-label">${doneCnt}/${esercizi.length}</span>
+    </div>
+    ${esercizi.map((ex,i) => {
+      const done = isGymDone(gymDay,i);
+      return `<div class="gym-ex-card ${done?'done':''}" onclick="toggleGymEx(${gymDay},${i})">
+        <div class="gym-ex-header">
+          <div class="gym-ex-name">${ex.nome}</div>
+          <div class="gym-ex-check ${done?'checked':''}">${done?'<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#0a0a0a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>':''}</div>
+        </div>
+        <div class="gym-ex-stats">
+          <span class="gym-ex-stat">${ex.serie} serie × ${ex.ripetizioni}</span>
+          ${ex.recupero ? `<span class="gym-ex-sep">·</span><span class="gym-ex-rec">rec. ${ex.recupero}</span>` : ''}
+        </div>
+        ${ex.note ? `<div class="gym-ex-note">${ex.note}</div>` : ''}
+      </div>`;
+    }).join('')}`;
+}
+
+function renderGym() {
+  const hasData = Object.values(state.gymData.giorni).some(d => (d.esercizi||[]).length > 0);
+  document.getElementById('gymNoData').style.display  = hasData ? 'none' : 'block';
+  document.getElementById('gymContent').style.display = hasData ? 'block' : 'none';
+  if (!hasData) return;
+  renderGymDayTabs();
+  renderGymExercises();
+}

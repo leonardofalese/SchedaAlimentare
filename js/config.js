@@ -88,6 +88,13 @@ const KCAL_DB = {
   'galbusera protein': 370,
 };
 
+const DEFAULT_GYM = {
+  giorni: {
+    0:{nome:'',esercizi:[]},1:{nome:'',esercizi:[]},2:{nome:'',esercizi:[]},
+    3:{nome:'',esercizi:[]},4:{nome:'',esercizi:[]},5:{nome:'',esercizi:[]},6:{nome:'',esercizi:[]}
+  }
+};
+
 // Calcola kcal da stringa alimento es. "150g latte intero" o "2 uova"
 function calcKcalFromFood(foodStr) {
   if (!foodStr || foodStr === 'Giorno libero' || foodStr === 'Libero') return 0;

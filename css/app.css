@@ -237,6 +237,33 @@ body{font-family:var(--font);color:var(--text)}
 .analytics-proj-info{display:flex;justify-content:space-between;font-size:12px;color:var(--text-mid);margin-bottom:12px}
 .analytics-proj-info strong{color:var(--text)}
 .analytics-warn{font-size:11px;color:var(--orange);background:rgba(255,140,66,.1);border:1px solid rgba(255,140,66,.2);border-radius:var(--r-sm);padding:8px 10px;margin-bottom:10px}
+/* WELCOME SEPARATOR */
+.welcome-section-sep{display:flex;align-items:center;gap:10px;margin:18px 0 14px}
+.welcome-sep-line{flex:1;height:1px;background:var(--border)}
+.welcome-sep-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-soft);white-space:nowrap}
+/* GYM VIEW */
+.gym-no-data{text-align:center;padding:48px 20px}
+.gym-no-data-icon{font-size:36px;margin-bottom:12px}
+.gym-no-data-text{font-size:16px;font-weight:700;margin-bottom:6px}
+.gym-no-data-sub{font-size:13px;color:var(--text-soft)}
+.gym-day-title{font-size:15px;font-weight:700;color:var(--text-mid);margin:12px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.gym-progress{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.gym-prog-bar{flex:1;height:4px;background:var(--border2);border-radius:2px;overflow:hidden}
+.gym-prog-fill{height:100%;background:var(--green);border-radius:2px;transition:width .4s}
+.gym-prog-label{font-size:11px;font-family:var(--mono);color:var(--text-soft);white-space:nowrap}
+.gym-ex-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:border-color .2s,background .2s;-webkit-tap-highlight-color:transparent}
+.gym-ex-card.done{border-color:rgba(184,245,102,.3);background:rgba(184,245,102,.04)}
+.gym-ex-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.gym-ex-name{font-size:14px;font-weight:700;line-height:1.3}
+.gym-ex-card.done .gym-ex-name{color:var(--green)}
+.gym-ex-check{width:22px;height:22px;border-radius:50%;border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s}
+.gym-ex-check.checked{background:var(--green);border-color:var(--green)}
+.gym-ex-stats{display:flex;align-items:center;gap:6px;margin-bottom:2px}
+.gym-ex-stat{font-family:var(--mono);font-size:12px;color:var(--orange)}
+.gym-ex-sep{color:var(--text-soft);font-size:11px}
+.gym-ex-rec{font-family:var(--mono);font-size:11px;color:var(--text-soft)}
+.gym-ex-note{font-size:11px;color:var(--text-soft);margin-top:6px;font-style:italic;line-height:1.4}
+.gym-empty{font-size:13px;color:var(--text-soft);text-align:center;padding:40px 20px}
 /* GREETING MODAL */
 .greeting-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px}
 .greeting-overlay.hidden{display:none}

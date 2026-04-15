@@ -9,6 +9,7 @@ function switchView(view,btn) {
   if(view==='tracker')renderTracker();
   if(view==='spesa'){renderShop();renderShopEditor();}
   if(view==='scheda'){renderSettingsDayTabs();renderMealEditor();}
+  if(view==='palestra')renderGym();
   if(view==='settings')initSettingsView();
 }
 
@@ -493,4 +494,151 @@ function confirmImport() {
   state.schedaLoadedAt = new Date().toISOString();
   save(); renderMeals(); updateProgress(); renderMealEditor(); cancelImport();
   showToast('Scheda e lista spesa aggiornate! ✓');
+}
+
+// ── GYM IMPORT ────────────────────────────────────────────
+let importedGymData = null;
+
+function handleGymDragOver(e, dropId) { e.preventDefault(); document.getElementById(dropId).classList.add('dragover'); }
+function handleGymDragLeave(e, dropId) { document.getElementById(dropId).classList.remove('dragover'); }
+function handleGymDrop(e, ctx) {
+  e.preventDefault();
+  const dropId = ctx==='gym-welcome' ? 'gymWelcomeImportDrop' : 'gymImportDrop';
+  document.getElementById(dropId).classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) processGymImportFile(file, ctx);
+}
+function handleGymFileSelect(e, ctx) {
+  const file = e.target.files[0];
+  if (file) processGymImportFile(file, ctx);
+}
+
+async function processGymImportFile(file, ctx) {
+  const isWelcome = ctx === 'gym-welcome';
+  const statusId    = isWelcome ? 'gymWelcomeImportStatus'         : 'gymImportStatus';
+  const previewId   = isWelcome ? 'gymWelcomeImportPreview'        : 'gymImportPreview';
+  const statusTextId= isWelcome ? 'gymWelcomeImportStatusText'     : 'gymImportStatusText';
+  const previewCId  = isWelcome ? 'gymWelcomeImportPreviewContent' : 'gymImportPreviewContent';
+  const dropId      = isWelcome ? 'gymWelcomeImportDrop'           : 'gymImportDrop';
+
+  const status = document.getElementById(statusId);
+  const preview = document.getElementById(previewId);
+  const statusText = document.getElementById(statusTextId);
+  preview.classList.remove('show');
+  status.classList.add('show');
+  statusText.textContent = 'Lettura file…';
+
+  try {
+    const { base64, mediaType } = await fileToBase64(file);
+    statusText.textContent = 'Claude sta analizzando la scheda palestra…';
+
+    const messages = buildImportMessages(base64, mediaType, file.type);
+    const response = await fetch('/api/claude', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        system: `Sei un assistente specializzato nell'estrazione di schede di allenamento da file.
+Analizza il contenuto e restituisci SOLO un JSON valido (senza markdown, senza backtick) con questa struttura esatta:
+{
+  "giorni": {
+    "0": {
+      "nome": "Nome del giorno es. Push / Petto-Spalle-Tricipiti / Giorno A",
+      "esercizi": [
+        {
+          "nome": "Nome esercizio",
+          "serie": 4,
+          "ripetizioni": "8-10",
+          "recupero": "90s",
+          "note": ""
+        }
+      ]
+    },
+    "1": { "nome": "...", "esercizi": [...] },
+    "2": { "nome": "...", "esercizi": [...] },
+    "3": { "nome": "...", "esercizi": [...] },
+    "4": { "nome": "...", "esercizi": [...] },
+    "5": { "nome": "...", "esercizi": [...] },
+    "6": { "nome": "...", "esercizi": [...] }
+  }
+}
+Regole importanti:
+- I giorni vanno da 0 (Lunedì) a 6 (Domenica).
+- Se un giorno è di riposo, usa nome "Riposo" e esercizi array vuoto [].
+- Se la scheda ha meno di 7 giorni (es. 3 giorni), distribuiscili nei giorni tipici (es. 0=Lun, 2=Mer, 4=Ven) e metti "Riposo" per gli altri.
+- "serie" deve essere un numero intero (es. 4).
+- "ripetizioni" è una stringa (es. "8-10", "12", "30s", "1 min").
+- "recupero" è una stringa (es. "60s", "90s", "2min"). Se non specificato usa stringa vuota "".
+- "note" è una stringa con note aggiuntive (es. "usa manubri", "progressivo"). Se nessuna nota usa "".
+- Se trovi superset o circuit, aggiungi una nota esplicativa nel campo "note".
+- Mantieni i nomi degli esercizi in italiano o come scritti nella scheda originale.
+Restituisci SOLO il JSON, niente altro.`,
+        messages
+      })
+    });
+
+    if (!response.ok) throw new Error('Errore API Claude');
+    const data = await response.json();
+    const text = data.content.find(b => b.type === 'text')?.text || '';
+    let parsed;
+    try {
+      parsed = JSON.parse(text.replace(/```json|```/g, '').trim());
+    } catch(e) {
+      throw new Error('Non riesco a leggere la struttura della scheda. Prova con un file più chiaro.');
+    }
+
+    importedGymData = parsed;
+    statusText.textContent = '✓ Scheda palestra letta con successo';
+    document.getElementById(dropId).style.display = 'none';
+    showGymImportPreview(parsed, previewCId);
+
+  } catch(err) {
+    statusText.textContent = '✗ ' + (err.message || 'Errore durante l\'analisi');
+  }
+}
+
+function showGymImportPreview(data, contentId) {
+  const previewId = contentId === 'gymWelcomeImportPreviewContent' ? 'gymWelcomeImportPreview' : 'gymImportPreview';
+  const content = document.getElementById(contentId);
+  content.innerHTML = Object.keys(data.giorni || {}).slice(0,7).map(d => {
+    const day = data.giorni[d];
+    const esercizi = day.esercizi || [];
+    const nome = day.nome || GIORNI[parseInt(d)];
+    if (!nome || (nome.toLowerCase() === 'riposo' && esercizi.length === 0)) {
+      return `<div class="import-day-preview"><div class="import-day-name">${GIORNI[parseInt(d)]}</div><div class="import-meal-preview" style="color:var(--text-soft)">Riposo</div></div>`;
+    }
+    const righe = esercizi.slice(0,3).map(e =>
+      `<div class="import-meal-preview"><strong>${e.nome}</strong> · ${e.serie}×${e.ripetizioni}</div>`
+    ).join('') + (esercizi.length > 3 ? `<div class="import-meal-preview">+${esercizi.length-3} altri…</div>` : '');
+    return `<div class="import-day-preview"><div class="import-day-name">${GIORNI[parseInt(d)]} · ${nome}</div>${righe}</div>`;
+  }).join('');
+  document.getElementById(previewId).classList.add('show');
+}
+
+function cancelGymImport(ctx) {
+  importedGymData = null;
+  const isWelcome = ctx === 'gym-welcome';
+  document.getElementById(isWelcome ? 'gymWelcomeImportPreview' : 'gymImportPreview').classList.remove('show');
+  document.getElementById(isWelcome ? 'gymWelcomeImportStatus'  : 'gymImportStatus').classList.remove('show');
+  const fileId = isWelcome ? 'gymWelcomeImportFile' : 'gymImportFile';
+  const dropId = isWelcome ? 'gymWelcomeImportDrop' : 'gymImportDrop';
+  document.getElementById(fileId).value = '';
+  document.getElementById(dropId).style.display = '';
+}
+
+function confirmGymImport(ctx) {
+  if (!importedGymData) return;
+  const fixed = {};
+  Object.keys(importedGymData.giorni).forEach(k => { fixed[parseInt(k)] = importedGymData.giorni[k]; });
+  state.gymData.giorni = fixed;
+  importedGymData = null;
+  save();
+  cancelGymImport(ctx);
+  showToast('Scheda palestra importata! ✓');
+  if (ctx === 'gym-welcome') {
+    // render avverrà quando l'utente naviga sulla tab
+  } else {
+    renderGym();
+  }
 }

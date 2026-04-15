@@ -13,7 +13,11 @@ async function loadFromCloud() {
     meals: {},
     shop: {},
     mealData: JSON.parse(JSON.stringify(DEFAULT_MEALS)),
-    shopData: JSON.parse(JSON.stringify(DEFAULT_SHOP))
+    shopData: JSON.parse(JSON.stringify(DEFAULT_SHOP)),
+    gymData: JSON.parse(JSON.stringify(DEFAULT_GYM)),
+    gymLog: {},
+    profileData: null,
+    schedaLoadedAt: null
   };
   showSync();
   const {data, error} = await sb.from('user_data').select('data').eq('user_id', currentUser.id).single();
@@ -32,6 +36,13 @@ async function loadFromCloud() {
     if (loaded.shopData) state.shopData = loaded.shopData;
     if (loaded.schedaLoadedAt) state.schedaLoadedAt = loaded.schedaLoadedAt;
     if (loaded.profileData) state.profileData = loaded.profileData;
+    if (loaded.gymData) {
+      state.gymData = loaded.gymData;
+      const fixedG = {};
+      Object.keys(state.gymData.giorni).forEach(k => { fixedG[parseInt(k)] = state.gymData.giorni[k]; });
+      state.gymData.giorni = fixedG;
+    }
+    if (loaded.gymLog) state.gymLog = loaded.gymLog;
   }
 }
 
@@ -40,7 +51,7 @@ async function saveToCloud() {
   showSync();
   await sb.from('user_data').upsert({
     user_id: currentUser.id,
-    data: { meals: state.meals, shop: state.shop, mealData: state.mealData, shopData: state.shopData, schedaLoadedAt: state.schedaLoadedAt, profileData: state.profileData },
+    data: { meals: state.meals, shop: state.shop, mealData: state.mealData, shopData: state.shopData, schedaLoadedAt: state.schedaLoadedAt, profileData: state.profileData, gymData: state.gymData, gymLog: state.gymLog },
     updated_at: new Date().toISOString()
   }, { onConflict: 'user_id' });
   hideSync();
