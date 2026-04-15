@@ -639,6 +639,17 @@ function renderSettingsDayTabs() {
   document.getElementById('settingsDayTabs').innerHTML=GIORNI_SHORT.map((g,i)=>`<button class="day-tab ${i===settingsDay?'active':''}" onclick="selectSettingsDay(${i})">${g}</button>`).join('');
 }
 function selectSettingsDay(i) { settingsDay=i; renderSettingsDayTabs(); renderMealEditor(); }
+// Alimenti ambigui crudo/cotto — chiavi che triggherano l'hint
+const _AMBIGUOUS_RE  = /\b(pasta|riso|pollo|tacchino|macinato|salmone|merluzzo|branzino|orata|bistecca|vitello|manzo|patate)\b/i;
+const _QUALIFIER_RE  = /\b(cott[oa]|crud[oa]|secca?|sgocciolat[oa]|affumicat[oa]|arrosto|integrale cott|basmati)\b/i;
+function _isAmbiguousFood(name) {
+  return _AMBIGUOUS_RE.test(name) && !_QUALIFIER_RE.test(name);
+}
+function checkFoodHint(k, i, val) {
+  const el = document.getElementById(`fh_${k}_${i}`);
+  if (el) el.style.display = _isAmbiguousFood(val) ? 'flex' : 'none';
+}
+
 function renderMealEditor() {
   const times=state.mealData.times;
   const dayData=state.mealData.days[settingsDay]||{};
@@ -649,7 +660,20 @@ function renderMealEditor() {
         <div class="settings-row-time"><label>Orario</label><input class="time-input" type="time" id="time_${k}" value="${times[k]}"></div>
       </div>
       <div class="food-edit-list" id="foods_${k}">
-        ${(dayData[k]||[]).map((f,i)=>{const p=parseFood(f);return`<div class="food-edit-row"><input class="shop-edit-qty" type="text" value="${p.qty.replace(/"/g,'&quot;')}" id="fi-qty_${k}_${i}" placeholder="150g"><input class="food-edit-input" type="text" value="${p.name.replace(/"/g,'&quot;')}" id="fi-name_${k}_${i}" placeholder="alimento"><button class="del-btn" onclick="delFood('${k}',${i})">×</button></div>`;}).join('')}
+        ${(dayData[k]||[]).map((f,i)=>{
+          const p=parseFood(f);
+          const ambig = _isAmbiguousFood(p.name);
+          return `<div class="food-edit-row-wrap">
+            <div class="food-edit-row">
+              <input class="shop-edit-qty" type="text" value="${p.qty.replace(/"/g,'&quot;')}" id="fi-qty_${k}_${i}" placeholder="150g">
+              <input class="food-edit-input" type="text" value="${p.name.replace(/"/g,'&quot;')}" id="fi-name_${k}_${i}" placeholder="alimento" oninput="checkFoodHint('${k}',${i},this.value)">
+              <button class="del-btn" onclick="delFood('${k}',${i})">×</button>
+            </div>
+            <div class="food-hint" id="fh_${k}_${i}" style="display:${ambig?'flex':'none'}">
+              <span>⚠</span> specifica <strong>cotto</strong> o <strong>crudo</strong> — il peso cambia le kcal
+            </div>
+          </div>`;
+        }).join('')}
       </div>
       <button class="add-food-btn" onclick="addFood('${k}')">+ Aggiungi alimento</button>
     </div>`).join('');
