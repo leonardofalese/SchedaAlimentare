@@ -141,14 +141,19 @@ function updateProgress() {
 // ── ANALYTICS ─────────────────────────────────────────────
 let _chartWeekly = null, _chartMeals = null, _chartProjection = null, _chartGym = null, _chartVol = null;
 
-function calcActivityMultiplier(trainingDays, totalSets) {
+function calcActivityMultiplier(trainingDays, totalVol) {
+  // Base da frequenza allenamenti
   let m;
   if (trainingDays === 0)     m = 1.2;
   else if (trainingDays <= 2) m = 1.375;
   else if (trainingDays <= 4) m = 1.55;
   else if (trainingDays <= 6) m = 1.725;
   else                         m = 1.9;
-  if (totalSets >= 80) m = Math.min(parseFloat((m + 0.05).toFixed(3)), 1.9);
+  // Bonus continuo da volume (serie × rip × kg) — ogni 10.000 kg/sett → +0.015, max +0.15
+  if (totalVol > 0) {
+    const volBonus = Math.min((totalVol / 10000) * 0.015, 0.15);
+    m = Math.min(parseFloat((m + volBonus).toFixed(3)), 1.9);
+  }
   return m;
 }
 
@@ -195,7 +200,7 @@ function renderTrackerAnalytics() {
   }, 0), 0);
   const totalDone   = gymDays.reduce((a,d,di) => a + (d.esercizi||[]).filter((_,i)=>isGymDone(di,i)).length, 0);
   const completePct = totalEx > 0 ? Math.round(totalDone/totalEx*100) : 0;
-  const actMult     = calcActivityMultiplier(trainingDays, totalSets);
+  const actMult     = calcActivityMultiplier(trainingDays, totalVol);
   const actLabel    = trainingDays === 0 ? 'Sedentario' : trainingDays <= 2 ? 'Leggero' : trainingDays <= 4 ? 'Moderato' : trainingDays <= 6 ? 'Attivo' : 'Max';
 
   let statsHTML = '';
@@ -210,7 +215,7 @@ function renderTrackerAnalytics() {
 
     statsHTML = `<div class="analytics-stats-row">
       <div class="analytics-stat"><div class="analytics-stat-val">${bmr||'—'}</div><div class="analytics-stat-label">BMR kcal</div></div>
-      <div class="analytics-stat"><div class="analytics-stat-val">${tdee||'—'}</div><div class="analytics-stat-label">TDEE${hasGymData ? ' · '+actLabel : ' kcal'}</div></div>
+      <div class="analytics-stat"><div class="analytics-stat-val">${tdee||'—'}</div><div class="analytics-stat-label">TDEE${hasGymData ? ` · ${actLabel} ×${actMult.toFixed(2)}` : ' kcal'}</div></div>
       <div class="analytics-stat"><div class="analytics-stat-val">${avgKcal||'—'}</div><div class="analytics-stat-label">Scheda/die</div></div>
       <div class="analytics-stat${balClass}"><div class="analytics-stat-val">${balText}</div><div class="analytics-stat-label">Bilancio</div></div>
     </div>`;
