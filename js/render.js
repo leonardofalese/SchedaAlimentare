@@ -40,17 +40,64 @@ function renderMeals() {
   document.getElementById('mealsContainer').innerHTML = MEAL_KEYS.map(k => {
     const done = isDone(currentDay,k);
     const foods = state.mealData.days[currentDay]?.[k]||[];
-    return `<div class="meal-card ${done?'done':''}" onclick="toggleMeal(${currentDay},'${k}')">
-      <div class="meal-header">
+    const kcalMeal = foods.reduce((s,f)=>s+calcKcalFromFood(f),0);
+    return `<div class="meal-card ${done?'done':''}" id="meal-card-${k}">
+      <div class="meal-header" onclick="toggleMeal(${currentDay},'${k}')">
         <div class="meal-icon-wrap" style="color:${done?'var(--green)':'var(--text-mid)'}">${ICO[k]}</div>
-        <div class="meal-info"><div class="meal-name">${MEAL_LABELS[k]}<span style="font-size:11px;font-weight:400;color:var(--text-mid);font-family:var(--mono)">${(()=>{const kc=foods.reduce((s,f)=>s+calcKcalFromFood(f),0);return kc>0?' · '+kc+' kcal':'';})()}</span></div><div class="meal-time">${times[k]}</div></div>
-        <div class="meal-check ${done?'checked':''}">${done?'<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#0a0a0a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>':''}</div>
+        <div class="meal-info"><div class="meal-name">${MEAL_LABELS[k]}<span style="font-size:11px;font-weight:400;color:var(--text-mid);margin-left:8px;font-family:var(--mono)">${kcalMeal>0?' · '+kcalMeal+' kcal':''}</span></div><div class="meal-time">${times[k]}</div></div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button onclick="event.stopPropagation();toggleMealEdit('${k}')" style="background:none;border:none;cursor:pointer;padding:4px;color:var(--text-soft);display:flex;align-items:center" title="Modifica quantità">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <div class="meal-check ${done?'checked':''}">${done?'<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#0a0a0a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>':''}</div>
+        </div>
       </div>
-      <div class="meal-foods">${foods.map(f=>{const p=parseFood(f);return`<div class="food-row"><span class="food-qty">${p.qty}</span><span class="food-name">${p.name}</span></div>`;}).join('')}</div>
+      <div class="meal-foods" id="meal-foods-${k}">${foods.map((f,fi)=>{const p=parseFood(f);return`<div class="food-row"><span class="food-qty">${p.qty}</span><span class="food-name">${p.name}</span></div>`;}).join('')}</div>
+      <div class="meal-edit-panel" id="meal-edit-${k}" style="display:none;padding:0 16px 14px 16px;border-top:1px solid var(--border)">
+        <div id="meal-edit-inputs-${k}" style="margin-top:10px">
+          ${foods.map((f,fi)=>`<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+            <input class="food-edit-input" type="text" value="${f.replace(/"/g,'&quot;')}" id="inline-food-${k}-${fi}" style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:6px 8px;font-family:var(--font);font-size:12px;color:var(--text);outline:none" oninput="updateInlineKcal('${k}')">
+          </div>`).join('')}
+        </div>
+        <button onclick="saveInlineMeal('${k}')" style="background:var(--green);color:#0a0a0a;border:none;border-radius:20px;padding:6px 16px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;margin-top:4px">Salva</button>
+        <button onclick="toggleMealEdit('${k}')" style="background:none;border:1px solid var(--border2);border-radius:20px;padding:6px 12px;font-family:var(--font);font-size:12px;color:var(--text-mid);cursor:pointer;margin-top:4px;margin-left:6px">Annulla</button>
+        <div id="inline-kcal-${k}" style="font-size:11px;color:var(--green);font-family:var(--mono);margin-top:6px"></div>
+      </div>
     </div>`;
   }).join('');
 }
 function toggleMeal(d,k) { state.meals[mealKey(d,k)]=!isDone(d,k); save(); renderMeals(); updateProgress(); renderDayNav(); }
+function toggleMealEdit(k) {
+  const panel = document.getElementById('meal-edit-' + k);
+  const isOpen = panel.style.display !== 'none';
+  // Close all other panels first
+  MEAL_KEYS.forEach(mk => {
+    const p = document.getElementById('meal-edit-' + mk);
+    if (p) p.style.display = 'none';
+  });
+  if (!isOpen) {
+    panel.style.display = 'block';
+    updateInlineKcal(k);
+  }
+}
+
+function updateInlineKcal(k) {
+  const inputs = document.querySelectorAll(`[id^="inline-food-${k}-"]`);
+  const total = Array.from(inputs).reduce((s, inp) => s + calcKcalFromFood(inp.value), 0);
+  const el = document.getElementById('inline-kcal-' + k);
+  if (el) el.textContent = total > 0 ? total + ' kcal' : '';
+}
+
+function saveInlineMeal(k) {
+  const inputs = document.querySelectorAll(`[id^="inline-food-${k}-"]`);
+  const newFoods = Array.from(inputs).map(i => i.value.trim()).filter(Boolean);
+  if (!state.mealData.days[currentDay]) state.mealData.days[currentDay] = {};
+  state.mealData.days[currentDay][k] = newFoods;
+  save();
+  renderMeals();
+  updateProgress();
+}
+
 function updateProgress() {
   const done = MEAL_KEYS.filter(k=>isDone(currentDay,k)).length;
   const kcalDone = calcDayKcal(currentDay, true);
