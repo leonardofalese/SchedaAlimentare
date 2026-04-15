@@ -8,11 +8,25 @@ function switchView(view,btn) {
   if(timerInt){clearInterval(timerInt);timerInt=null;}
   if(view==='tracker')renderTracker();
   if(view==='spesa'){renderShop();renderShopEditor();}
-  if(view==='scheda'){renderSettingsDayTabs();renderMealEditor();}
+  if(view==='scheda'){switchSchedeTab(schedeActiveTab);}
   if(view==='palestra')renderGym();
   if(view==='settings')initSettingsView();
 }
 
+
+function switchSchedeTab(tab) {
+  schedeActiveTab = tab;
+  const tabAlim = document.getElementById('schedeTabAlim');
+  const tabGym  = document.getElementById('schedeTabGym');
+  const secAlim = document.getElementById('schedeAlimentare');
+  const secGym  = document.getElementById('schedePalestra');
+  if (tabAlim) tabAlim.classList.toggle('active', tab === 'alimentare');
+  if (tabGym)  tabGym.classList.toggle('active',  tab === 'palestra');
+  if (secAlim) secAlim.style.display = tab === 'alimentare' ? '' : 'none';
+  if (secGym)  secGym.style.display  = tab === 'palestra'   ? '' : 'none';
+  if (tab === 'alimentare') { renderSettingsDayTabs(); renderMealEditor(); }
+  if (tab === 'palestra')   { renderGymEditorDayTabs(); renderGymEditor(); }
+}
 
 // ── FORGOT PASSWORD ───────────────────────────────────────
 async function doForgotPassword() {

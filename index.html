@@ -215,6 +215,10 @@
         <div class="section-label">Pasti del giorno</div>
         <div id="mealsContainer"></div>
       </div>
+      <div class="section" id="homeGymSection" style="display:none">
+        <div class="section-label">Allenamento del giorno</div>
+        <div id="homeGymContainer"></div>
+      </div>
     </div>
 
     <div class="view" id="view-tracker">
@@ -256,13 +260,27 @@
 
     <div class="view" id="view-scheda">
       <div class="settings-wrap">
-        <div style="font-size:22px;font-weight:800;margin-bottom:4px">Scheda</div>
-        <div style="font-size:13px;color:var(--text-mid);margin-bottom:20px">Pasti e orari settimanali</div>
-        <div class="settings-section">
-          <div class="settings-section-title">Pasti & Orari per giorno</div>
-          <div class="day-tabs" id="settingsDayTabs"></div>
-          <div id="mealEditorContainer"></div>
-          <button class="save-btn" onclick="saveMeals()">Salva modifiche pasti</button>
+        <div style="font-size:22px;font-weight:800;margin-bottom:4px">Schede</div>
+        <div style="font-size:13px;color:var(--text-mid);margin-bottom:16px">Alimentare e palestra</div>
+        <div class="schede-tabs">
+          <button class="schede-tab active" id="schedeTabAlim" onclick="switchSchedeTab('alimentare')">Alimentare</button>
+          <button class="schede-tab" id="schedeTabGym" onclick="switchSchedeTab('palestra')">Palestra</button>
+        </div>
+        <div id="schedeAlimentare">
+          <div class="settings-section">
+            <div class="settings-section-title">Pasti & Orari per giorno</div>
+            <div class="day-tabs" id="settingsDayTabs"></div>
+            <div id="mealEditorContainer"></div>
+            <button class="save-btn" onclick="saveMeals()">Salva modifiche pasti</button>
+          </div>
+        </div>
+        <div id="schedePalestra" style="display:none">
+          <div class="settings-section">
+            <div class="settings-section-title">Esercizi per giorno</div>
+            <div class="day-tabs" id="gymEditorDayTabs"></div>
+            <div id="gymEditorContainer"></div>
+            <button class="save-btn" onclick="saveGymExercises()">Salva scheda palestra</button>
+          </div>
         </div>
         <div style="height:20px"></div>
       </div>
@@ -272,6 +290,13 @@
       <div class="settings-wrap">
         <div style="font-size:22px;font-weight:800;margin-bottom:4px">Palestra</div>
         <div style="font-size:13px;color:var(--text-mid);margin-bottom:16px">Scheda settimanale</div>
+        <div class="gym-swatch-card">
+          <div class="gym-swatch-display" id="gymSwatchDisplay">00:00</div>
+          <div class="gym-swatch-btns">
+            <button class="gym-swatch-btn primary" id="gymSwatchBtn" onclick="gymSwatchToggle()">▶ Avvia</button>
+            <button class="gym-swatch-btn" onclick="gymSwatchReset()">↺ Reset</button>
+          </div>
+        </div>
         <div id="gymNoData" class="gym-no-data">
           <div class="gym-no-data-icon">🏋️</div>
           <div class="gym-no-data-text">Nessuna scheda caricata</div>
@@ -417,7 +442,7 @@
     </button>
     <button class="nav-btn" onclick="switchView('scheda',this)">
       <span class="nav-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f0f0f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg></span>
-      <span class="nav-lbl">Scheda</span>
+      <span class="nav-lbl">Schede</span>
     </button>
     <button class="nav-btn" onclick="switchView('palestra',this)">
       <span class="nav-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f0f0f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5h11M6.5 17.5h11M2 9.5h3M19 9.5h3M2 14.5h3M19 14.5h3"/><rect x="5" y="8" width="1.5" height="8" rx=".75"/><rect x="17.5" y="8" width="1.5" height="8" rx=".75"/></svg></span>
