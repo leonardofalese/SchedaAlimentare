@@ -55,9 +55,10 @@ function renderMeals() {
       <div class="meal-foods" id="meal-foods-${k}">${foods.map((f,fi)=>{const p=parseFood(f);return`<div class="food-row"><span class="food-qty">${p.qty}</span><span class="food-name">${p.name}</span></div>`;}).join('')}</div>
       <div class="meal-edit-panel" id="meal-edit-${k}" style="display:none;padding:0 16px 14px 16px;border-top:1px solid var(--border)">
         <div id="meal-edit-inputs-${k}" style="margin-top:10px">
-          ${foods.map((f,fi)=>`<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
-            <input class="food-edit-input" type="text" value="${f.replace(/"/g,'&quot;')}" id="inline-food-${k}-${fi}" style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:6px 8px;font-family:var(--font);font-size:12px;color:var(--text);outline:none" oninput="updateInlineKcal('${k}')">
-          </div>`).join('')}
+          ${foods.map((f,fi)=>{const p=parseFood(f);return`<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+            <input class="shop-edit-qty" type="text" value="${p.qty.replace(/"/g,'&quot;')}" id="inline-qty-${k}-${fi}" placeholder="150g" oninput="updateInlineKcal('${k}')">
+            <input class="food-edit-input" type="text" value="${p.name.replace(/"/g,'&quot;')}" id="inline-name-${k}-${fi}" style="flex:1;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:6px 8px;font-family:var(--font);font-size:12px;color:var(--text);outline:none" oninput="updateInlineKcal('${k}')">
+          </div>`;}).join('')}
         </div>
         <button onclick="saveInlineMeal('${k}')" style="background:var(--green);color:#0a0a0a;border:none;border-radius:20px;padding:6px 16px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;margin-top:4px">Salva</button>
         <button onclick="toggleMealEdit('${k}')" style="background:none;border:1px solid var(--border2);border-radius:20px;padding:6px 12px;font-family:var(--font);font-size:12px;color:var(--text-mid);cursor:pointer;margin-top:4px;margin-left:6px">Annulla</button>
@@ -82,15 +83,22 @@ function toggleMealEdit(k) {
 }
 
 function updateInlineKcal(k) {
-  const inputs = document.querySelectorAll(`[id^="inline-food-${k}-"]`);
-  const total = Array.from(inputs).reduce((s, inp) => s + calcKcalFromFood(inp.value), 0);
+  const nameInputs = document.querySelectorAll(`[id^="inline-name-${k}-"]`);
+  let total = 0;
+  nameInputs.forEach((nameEl, i) => {
+    const qtyEl = document.getElementById(`inline-qty-${k}-${i}`);
+    total += calcKcalFromFood(((qtyEl?.value||'') + ' ' + nameEl.value).trim());
+  });
   const el = document.getElementById('inline-kcal-' + k);
   if (el) el.textContent = total > 0 ? total + ' kcal' : '';
 }
 
 function saveInlineMeal(k) {
-  const inputs = document.querySelectorAll(`[id^="inline-food-${k}-"]`);
-  const newFoods = Array.from(inputs).map(i => i.value.trim()).filter(Boolean);
+  const nameInputs = document.querySelectorAll(`[id^="inline-name-${k}-"]`);
+  const newFoods = Array.from(nameInputs).map((nameEl, i) => {
+    const qtyEl = document.getElementById(`inline-qty-${k}-${i}`);
+    return ((qtyEl?.value||'') + ' ' + nameEl.value).trim();
+  }).filter(Boolean);
   if (!state.mealData.days[currentDay]) state.mealData.days[currentDay] = {};
   state.mealData.days[currentDay][k] = newFoods;
   const generated = generateShopFromMeals(state.mealData);
@@ -384,7 +392,7 @@ function renderMealEditor() {
         <div class="settings-row-time"><label>Orario</label><input class="time-input" type="time" id="time_${k}" value="${times[k]}"></div>
       </div>
       <div class="food-edit-list" id="foods_${k}">
-        ${(dayData[k]||[]).map((f,i)=>`<div class="food-edit-row"><input class="food-edit-input" type="text" value="${f.replace(/"/g,'&quot;')}" id="fi_${k}_${i}" placeholder="es. 150g latte intero"><button class="del-btn" onclick="delFood('${k}',${i})">×</button></div>`).join('')}
+        ${(dayData[k]||[]).map((f,i)=>{const p=parseFood(f);return`<div class="food-edit-row"><input class="shop-edit-qty" type="text" value="${p.qty.replace(/"/g,'&quot;')}" id="fi-qty_${k}_${i}" placeholder="150g"><input class="food-edit-input" type="text" value="${p.name.replace(/"/g,'&quot;')}" id="fi-name_${k}_${i}" placeholder="alimento"><button class="del-btn" onclick="delFood('${k}',${i})">×</button></div>`;}).join('')}
       </div>
       <button class="add-food-btn" onclick="addFood('${k}')">+ Aggiungi alimento</button>
     </div>`).join('');
@@ -405,8 +413,11 @@ function saveMeals() {
   MEAL_KEYS.forEach(k=>{
     const tEl=document.getElementById('time_'+k);
     if(tEl&&tEl.value)state.mealData.times[k]=tEl.value;
-    const inputs=document.querySelectorAll(`#foods_${k} .food-edit-input`);
-    state.mealData.days[settingsDay][k]=Array.from(inputs).map(i=>i.value.trim()).filter(Boolean);
+    const nameInputs=document.querySelectorAll(`[id^="fi-name_${k}_"]`);
+    state.mealData.days[settingsDay][k]=Array.from(nameInputs).map((nameEl,i)=>{
+      const qtyEl=document.getElementById(`fi-qty_${k}_${i}`);
+      return ((qtyEl?.value||'') + ' ' + nameEl.value).trim();
+    }).filter(Boolean);
   });
   const generated = generateShopFromMeals(state.mealData);
   if (generated.length > 0) { state.shopData = generated; renderShopEditor(); }
