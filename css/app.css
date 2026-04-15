@@ -246,6 +246,11 @@ body{font-family:var(--font);color:var(--text)}
 .analytics-proj-info{display:flex;justify-content:space-between;font-size:12px;color:var(--text-mid);margin-bottom:12px}
 .analytics-proj-info strong{color:var(--text)}
 .analytics-warn{font-size:11px;color:var(--orange);background:rgba(255,140,66,.1);border:1px solid rgba(255,140,66,.2);border-radius:var(--r-sm);padding:8px 10px;margin-bottom:10px}
+.analytics-gym-proj{background:rgba(100,180,255,.06);border:1px solid rgba(100,180,255,.15);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:12px}
+.analytics-gym-proj-title{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:rgba(100,180,255,.8);margin-bottom:8px}
+.analytics-gym-proj-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text-mid);padding:3px 0}
+.analytics-gym-proj-row strong{font-family:var(--mono);font-size:13px;color:var(--text)}
+.analytics-gym-proj-note{font-size:10px;color:var(--text-soft);margin-top:8px;padding-top:8px;border-top:1px solid rgba(100,180,255,.1)}
 /* WELCOME SEPARATOR */
 .welcome-section-sep{display:flex;align-items:center;gap:10px;margin:18px 0 14px}
 .welcome-sep-line{flex:1;height:1px;background:var(--border)}

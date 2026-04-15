@@ -141,6 +141,17 @@ function updateProgress() {
 // ── ANALYTICS ─────────────────────────────────────────────
 let _chartWeekly = null, _chartMeals = null, _chartProjection = null, _chartGym = null, _chartVol = null;
 
+function calcActivityMultiplier(trainingDays, totalSets) {
+  let m;
+  if (trainingDays === 0)     m = 1.2;
+  else if (trainingDays <= 2) m = 1.375;
+  else if (trainingDays <= 4) m = 1.55;
+  else if (trainingDays <= 6) m = 1.725;
+  else                         m = 1.9;
+  if (totalSets >= 80) m = Math.min(parseFloat((m + 0.05).toFixed(3)), 1.9);
+  return m;
+}
+
 function calcBMR(pd) {
   if (!pd || !pd.peso || !pd.altezza || !pd.eta) return 0;
   const base = 10 * pd.peso + 6.25 * pd.altezza - 5 * pd.eta;
@@ -171,30 +182,75 @@ function renderTrackerAnalytics() {
     return Math.round(tot / 7);
   });
 
+  // ── GYM BASICS (calcolati prima del TDEE) ──────────────
+  const gymDays    = Array.from({length:7}, (_,d) => state.gymData.giorni[d] || {nome:'', esercizi:[]});
+  const hasGymData = gymDays.some(d => (d.esercizi||[]).length > 0);
+  const trainingDays = gymDays.filter(d => (d.esercizi||[]).length > 0 && (d.nome||'').toLowerCase() !== 'riposo').length;
+  const totalEx      = gymDays.reduce((a,d) => a + (d.esercizi||[]).length, 0);
+  const totalSets    = gymDays.reduce((a,d) => a + (d.esercizi||[]).reduce((b,ex) => b+(parseInt(ex.serie)||0), 0), 0);
+  const totalVol     = gymDays.reduce((a,d) => a + (d.esercizi||[]).reduce((b,ex) => {
+    const kg  = parseFloat(ex.kg);
+    const rip = parseInt((ex.ripetizioni||'').split('-')[0]);
+    return (!isNaN(kg) && kg > 0 && !isNaN(rip) && rip > 0) ? b + (parseInt(ex.serie)||0)*rip*kg : b;
+  }, 0), 0);
+  const totalDone   = gymDays.reduce((a,d,di) => a + (d.esercizi||[]).filter((_,i)=>isGymDone(di,i)).length, 0);
+  const completePct = totalEx > 0 ? Math.round(totalDone/totalEx*100) : 0;
+  const actMult     = calcActivityMultiplier(trainingDays, totalSets);
+  const actLabel    = trainingDays === 0 ? 'Sedentario' : trainingDays <= 2 ? 'Leggero' : trainingDays <= 4 ? 'Moderato' : trainingDays <= 6 ? 'Attivo' : 'Max';
+
   let statsHTML = '';
-  let projHTML = '';
+  let projHTML  = '';
 
   if (pd && (pd.peso || pd.altezza || pd.eta)) {
-    const bmr = calcBMR(pd);
-    const tdee = bmr ? Math.round(bmr * 1.55) : 0;
+    const bmr     = calcBMR(pd);
+    const tdee    = bmr ? Math.round(bmr * actMult) : 0;
     const balance = avgKcal && tdee ? avgKcal - tdee : null;
     const balClass = balance === null ? '' : balance > 0 ? ' surplus' : ' deficit';
-    const balText = balance === null ? '—' : (balance > 0 ? '+' : '') + balance;
+    const balText  = balance === null ? '—' : (balance > 0 ? '+' : '') + balance;
 
     statsHTML = `<div class="analytics-stats-row">
       <div class="analytics-stat"><div class="analytics-stat-val">${bmr||'—'}</div><div class="analytics-stat-label">BMR kcal</div></div>
-      <div class="analytics-stat"><div class="analytics-stat-val">${tdee||'—'}</div><div class="analytics-stat-label">TDEE kcal</div></div>
+      <div class="analytics-stat"><div class="analytics-stat-val">${tdee||'—'}</div><div class="analytics-stat-label">TDEE${hasGymData ? ' · '+actLabel : ' kcal'}</div></div>
       <div class="analytics-stat"><div class="analytics-stat-val">${avgKcal||'—'}</div><div class="analytics-stat-label">Scheda/die</div></div>
       <div class="analytics-stat${balClass}"><div class="analytics-stat-val">${balText}</div><div class="analytics-stat-label">Bilancio</div></div>
     </div>`;
 
     if (pd.obiettivo && pd.obiettivo !== 'mantenere' && pd.pesoObiettivo && pd.peso && balance !== null && Math.abs(balance) > 50) {
-      const kgDiff = parseFloat(Math.abs(pd.peso - pd.pesoObiettivo).toFixed(1));
-      const daysNeeded = Math.round((kgDiff * 7700) / Math.abs(balance));
+      const kgDiff      = parseFloat(Math.abs(pd.peso - pd.pesoObiettivo).toFixed(1));
+      const daysNeeded  = Math.round((kgDiff * 7700) / Math.abs(balance));
       const weeksNeeded = Math.round(daysNeeded / 7);
-      const timeStr = weeksNeeded <= 12 ? weeksNeeded + ' settimane' : (weeksNeeded / 4.3).toFixed(1) + ' mesi';
-      const dirLabel = pd.obiettivo === 'dimagrire' ? 'Da perdere' : 'Da guadagnare';
-      const onTrack = (pd.obiettivo === 'dimagrire' && balance < 0) || (pd.obiettivo === 'massa' && balance > 0);
+      const timeStr     = weeksNeeded <= 12 ? weeksNeeded + ' settimane' : (weeksNeeded / 4.3).toFixed(1) + ' mesi';
+      const dirLabel    = pd.obiettivo === 'dimagrire' ? 'Da perdere' : 'Da guadagnare';
+      const onTrack     = (pd.obiettivo === 'dimagrire' && balance < 0) || (pd.obiettivo === 'massa' && balance > 0);
+
+      // Gym-aware breakdown
+      let gymProjNote = '';
+      if (hasGymData && trainingDays >= 2) {
+        if (pd.obiettivo === 'massa') {
+          // Natural max muscle gain based on training frequency
+          const maxKgPerMonth = trainingDays >= 5 ? 1.0 : trainingDays >= 3 ? 0.7 : 0.5;
+          const totalMonths   = parseFloat((weeksNeeded / 4.3).toFixed(1));
+          const estMuscle     = parseFloat(Math.min(maxKgPerMonth * totalMonths, kgDiff * 0.65).toFixed(1));
+          const estFat        = parseFloat(Math.max(kgDiff - estMuscle, 0).toFixed(1));
+          gymProjNote = `<div class="analytics-gym-proj">
+            <div class="analytics-gym-proj-title">Composizione stimata del gain</div>
+            <div class="analytics-gym-proj-row"><span>Massa muscolare</span><strong class="analytics-green">+${estMuscle} kg</strong></div>
+            <div class="analytics-gym-proj-row"><span>Grasso corporeo</span><strong>+${estFat} kg</strong></div>
+            <div class="analytics-gym-proj-note">${trainingDays} sessioni/sett · max ~${maxKgPerMonth} kg muscolo/mese</div>
+          </div>`;
+        } else if (pd.obiettivo === 'dimagrire') {
+          // With training: ~80% fat loss, ~20% lean mass (much better than without)
+          const estFatLoss  = parseFloat((kgDiff * 0.82).toFixed(1));
+          const estLeanLoss = parseFloat((kgDiff * 0.18).toFixed(1));
+          gymProjNote = `<div class="analytics-gym-proj">
+            <div class="analytics-gym-proj-title">Composizione stimata della perdita</div>
+            <div class="analytics-gym-proj-row"><span>Grasso perso</span><strong class="analytics-green">−${estFatLoss} kg</strong></div>
+            <div class="analytics-gym-proj-row"><span>Massa magra</span><strong>−${estLeanLoss} kg</strong></div>
+            <div class="analytics-gym-proj-note">${trainingDays} sessioni/sett · l'allenamento preserva la massa muscolare</div>
+          </div>`;
+        }
+      }
+
       projHTML = `<div class="analytics-card">
         <div class="analytics-card-title">Proiezione obiettivo</div>
         <div class="analytics-proj-row">
@@ -207,35 +263,20 @@ function renderTrackerAnalytics() {
           <span>Stima: <strong class="analytics-green">${timeStr}</strong></span>
         </div>
         ${!onTrack ? '<div class="analytics-warn">⚠ Bilancio non allineato con l\'obiettivo</div>' : ''}
+        ${gymProjNote}
         <canvas id="projectionChart" height="90"></canvas>
       </div>`;
     }
   }
 
-  // ── GYM ANALYTICS ──────────────────────────────────────
-  const gymDays   = Array.from({length:7}, (_,d) => state.gymData.giorni[d] || {nome:'', esercizi:[]});
-  const hasGymData = gymDays.some(d => (d.esercizi||[]).length > 0);
-
   let gymStatsHTML = '', gymChartHTML = '';
   if (hasGymData) {
-    const trainingDays = gymDays.filter(d => (d.esercizi||[]).length > 0 && (d.nome||'').toLowerCase() !== 'riposo').length;
-    const totalEx      = gymDays.reduce((a,d) => a + (d.esercizi||[]).length, 0);
-    const totalSets    = gymDays.reduce((a,d) => a + (d.esercizi||[]).reduce((b,ex) => b+(parseInt(ex.serie)||0), 0), 0);
-    const totalVol     = gymDays.reduce((a,d) => a + (d.esercizi||[]).reduce((b,ex) => {
-      const kg  = parseFloat(ex.kg);
-      const rip = parseInt((ex.ripetizioni||'').split('-')[0]);
-      return (!isNaN(kg) && kg > 0 && !isNaN(rip) && rip > 0) ? b + (parseInt(ex.serie)||0)*rip*kg : b;
-    }, 0), 0);
-    const totalDone    = gymDays.reduce((a,d,di) => a + (d.esercizi||[]).filter((_,i)=>isGymDone(di,i)).length, 0);
-    const completePct  = totalEx > 0 ? Math.round(totalDone/totalEx*100) : 0;
-
     gymStatsHTML = `<div class="analytics-stats-row" style="margin-top:0">
       <div class="analytics-stat"><div class="analytics-stat-val">${trainingDays}</div><div class="analytics-stat-label">Sessioni/sett</div></div>
       <div class="analytics-stat"><div class="analytics-stat-val">${totalEx}</div><div class="analytics-stat-label">Esercizi/sett</div></div>
       <div class="analytics-stat"><div class="analytics-stat-val">${totalSets}</div><div class="analytics-stat-label">Serie totali</div></div>
-      <div class="analytics-stat ${completePct===100?'surplus':''}"><div class="analytics-stat-val">${totalVol>0?Math.round(totalVol)+'kg':''+completePct+'%'}</div><div class="analytics-stat-label">${totalVol>0?'Volume sett.':'Completato'}</div></div>
+      <div class="analytics-stat ${completePct===100?'surplus':''}"><div class="analytics-stat-val">${totalVol>0?Math.round(totalVol)+'kg':completePct+'%'}</div><div class="analytics-stat-label">${totalVol>0?'Volume sett.':'Completato'}</div></div>
     </div>`;
-
     gymChartHTML = `
     <div class="analytics-card">
       <div class="analytics-card-title">Completamento allenamenti · settimana</div>
