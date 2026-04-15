@@ -60,8 +60,10 @@ function skipWelcome() {
 
 function cancelWelcomeImport() {
   importedMealData = null;
+  delete _importCache['welcome'];
   document.getElementById('welcomeImportPreview').classList.remove('show');
   document.getElementById('welcomeImportStatus').classList.remove('show');
+  document.getElementById('welcomeImportQuestions').style.display = 'none';
   document.getElementById('welcomeImportFile').value = '';
   document.getElementById('welcomeImportDrop').style.display = '';
 }
@@ -348,7 +350,7 @@ async function saveSettingsPassword() {
 }
 
 // ── IMPORT SCHEDA ─────────────────────────────────────────
-let importedMealData = null;
+let importedMealData = null, _importCache = {};
 
 function handleDragOver(e, dropId) { e.preventDefault(); document.getElementById(dropId||'importDrop').classList.add('dragover'); }
 function handleDragLeave(e, dropId) { document.getElementById(dropId||'importDrop').classList.remove('dragover'); }
@@ -367,19 +369,21 @@ function handleFileSelect(e, ctx) {
 async function processImportFile(file, ctx) {
   ctx = ctx || 'settings';
   const isWelcome = ctx === 'welcome';
-  const statusId = isWelcome ? 'welcomeImportStatus' : 'importStatus';
-  const previewId = isWelcome ? 'welcomeImportPreview' : 'importPreview';
-  const statusTextId = isWelcome ? 'welcomeImportStatusText' : 'importStatusText';
+  const statusId       = isWelcome ? 'welcomeImportStatus'        : 'importStatus';
+  const statusTextId   = isWelcome ? 'welcomeImportStatusText'    : 'importStatusText';
   const previewContentId = isWelcome ? 'welcomeImportPreviewContent' : 'importPreviewContent';
-  const status = document.getElementById(statusId);
-  const preview = document.getElementById(previewId);
+  const questionsId    = isWelcome ? 'welcomeImportQuestions'     : 'importQuestions';
+  const dropId         = isWelcome ? 'welcomeImportDrop'          : 'importDrop';
+  const status     = document.getElementById(statusId);
   const statusText = document.getElementById(statusTextId);
-  preview.classList.remove('show');
+  document.getElementById(isWelcome ? 'welcomeImportPreview' : 'importPreview').classList.remove('show');
+  const qEl = document.getElementById(questionsId); if (qEl) qEl.style.display = 'none';
   status.classList.add('show');
   statusText.textContent = 'Lettura file…';
 
   try {
     const { base64, mediaType } = await fileToBase64(file);
+    _importCache[ctx] = { base64, mediaType, fileType: file.type, isGym: false };
     statusText.textContent = 'Claude sta analizzando la scheda…';
 
     const messages = buildImportMessages(base64, mediaType, file.type);
@@ -389,25 +393,22 @@ async function processImportFile(file, ctx) {
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 4000,
-        system: `Sei un assistente che estrae schede alimentari da file. 
-Analizza il contenuto e restituisci SOLO un JSON valido (senza markdown, senza backtick) con questa struttura esatta:
-{
-  "times": { "colazione": "HH:MM", "pranzo": "HH:MM", "spuntini": "HH:MM", "cena": "HH:MM" },
-  "days": {
-    "0": { "colazione": ["alimento1", "alimento2"], "pranzo": [...], "spuntini": [...], "cena": [...] },
-    "1": { ... },
-    "2": { ... },
-    "3": { ... },
-    "4": { ... },
-    "5": { ... },
-    "6": { ... }
-  }
-}
-I giorni vanno da 0 (Lunedì) a 6 (Domenica).
-Gli alimenti devono includere quantità es. "150g latte intero", "2 uova", "100g riso".
-Se un giorno non è specificato, usa "Giorno libero" per tutti i pasti.
-Se gli orari non sono specificati usa: colazione 07:30, pranzo 13:00, spuntini 16:30, cena 20:00.
-Restituisci SOLO il JSON, niente altro.`,
+        system: `Sei un assistente che estrae schede alimentari da file.
+Analizza il contenuto e decidi:
+
+1. Se tutto è chiaro, rispondi SOLO con questo JSON:
+{"status":"complete","data":{"times":{"colazione":"HH:MM","pranzo":"HH:MM","spuntini":"HH:MM","cena":"HH:MM"},"days":{"0":{"colazione":[...],"pranzo":[...],"spuntini":[...],"cena":[...]},"1":{...},"2":{...},"3":{...},"4":{...},"5":{...},"6":{...}}}}
+
+2. Se hai dubbi importanti (giorni ambigui, struttura poco chiara, informazioni critiche mancanti), rispondi SOLO con:
+{"status":"questions","questions":["Prima domanda?","Seconda domanda?"]}
+
+Regole:
+- I giorni vanno da 0 (Lunedì) a 6 (Domenica).
+- Gli alimenti devono includere quantità es. "150g latte", "2 uova".
+- Giorni non specificati → "Giorno libero" per tutti i pasti.
+- Orari di default: colazione 07:30, pranzo 13:00, spuntini 16:30, cena 20:00.
+- Massimo 3 domande, solo le più critiche.
+- Restituisci SOLO il JSON, niente altro.`,
         messages
       })
     });
@@ -415,25 +416,24 @@ Restituisci SOLO il JSON, niente altro.`,
     if (!response.ok) throw new Error('Errore API Claude');
     const data = await response.json();
     const text = data.content.find(b => b.type === 'text')?.text || '';
-
     let parsed;
-    try {
-      const clean = text.replace(/```json|```/g, '').trim();
-      parsed = JSON.parse(clean);
-    } catch(e) {
-      throw new Error('Non riesco a leggere la struttura della scheda. Prova con un file più chiaro.');
+    try { parsed = JSON.parse(text.replace(/```json|```/g,'').trim()); }
+    catch(e) { throw new Error('Non riesco a leggere la struttura della scheda. Prova con un file più chiaro.'); }
+
+    document.getElementById(dropId).style.display = 'none';
+
+    if (parsed.status === 'questions') {
+      statusText.textContent = '💬 Ho alcune domande sulla scheda…';
+      _importCache[ctx].questions = parsed.questions;
+      showImportQuestions(parsed.questions, questionsId, ctx);
+    } else {
+      const mealData = parsed.data || parsed;
+      importedMealData = mealData;
+      statusText.textContent = '✓ Scheda letta con successo';
+      showImportPreview(mealData, previewContentId);
     }
-
-    importedMealData = parsed;
-    statusText.textContent = '✓ Scheda letta con successo';
-    // Nascondi il box di upload e mostra solo l'anteprima
-    const dropEl = document.getElementById(isWelcome ? 'welcomeImportDrop' : 'importDrop');
-    if (dropEl) dropEl.style.display = 'none';
-    showImportPreview(parsed, previewContentId);
-
   } catch(err) {
     statusText.textContent = '✗ ' + (err.message || 'Errore durante l\'analisi');
-    document.getElementById('importSpinner').style.display = 'none';
   }
 }
 
@@ -491,8 +491,10 @@ function showImportPreview(data, previewContentId) {
 
 function cancelImport() {
   importedMealData = null;
+  delete _importCache['settings'];
   document.getElementById('importPreview').classList.remove('show');
   document.getElementById('importStatus').classList.remove('show');
+  document.getElementById('importQuestions').style.display = 'none';
   document.getElementById('importFile').value = '';
   document.getElementById('importDrop').style.display = '';
 }
@@ -528,22 +530,22 @@ function handleGymFileSelect(e, ctx) {
 }
 
 async function processGymImportFile(file, ctx) {
-  const isWelcome = ctx === 'gym-welcome';
-  const statusId    = isWelcome ? 'gymWelcomeImportStatus'         : 'gymImportStatus';
-  const previewId   = isWelcome ? 'gymWelcomeImportPreview'        : 'gymImportPreview';
-  const statusTextId= isWelcome ? 'gymWelcomeImportStatusText'     : 'gymImportStatusText';
-  const previewCId  = isWelcome ? 'gymWelcomeImportPreviewContent' : 'gymImportPreviewContent';
-  const dropId      = isWelcome ? 'gymWelcomeImportDrop'           : 'gymImportDrop';
-
-  const status = document.getElementById(statusId);
-  const preview = document.getElementById(previewId);
+  const isWelcome  = ctx === 'gym-welcome';
+  const statusId   = isWelcome ? 'gymWelcomeImportStatus'         : 'gymImportStatus';
+  const statusTextId = isWelcome ? 'gymWelcomeImportStatusText'   : 'gymImportStatusText';
+  const previewCId = isWelcome ? 'gymWelcomeImportPreviewContent' : 'gymImportPreviewContent';
+  const questionsId = isWelcome ? 'gymWelcomeImportQuestions'     : 'gymImportQuestions';
+  const dropId     = isWelcome ? 'gymWelcomeImportDrop'           : 'gymImportDrop';
+  const status     = document.getElementById(statusId);
   const statusText = document.getElementById(statusTextId);
-  preview.classList.remove('show');
+  document.getElementById(isWelcome ? 'gymWelcomeImportPreview' : 'gymImportPreview').classList.remove('show');
+  const qEl = document.getElementById(questionsId); if (qEl) qEl.style.display = 'none';
   status.classList.add('show');
   statusText.textContent = 'Lettura file…';
 
   try {
     const { base64, mediaType } = await fileToBase64(file);
+    _importCache[ctx] = { base64, mediaType, fileType: file.type, isGym: true };
     statusText.textContent = 'Claude sta analizzando la scheda palestra…';
 
     const messages = buildImportMessages(base64, mediaType, file.type);
@@ -554,40 +556,22 @@ async function processGymImportFile(file, ctx) {
         model: 'claude-sonnet-4-20250514',
         max_tokens: 4000,
         system: `Sei un assistente specializzato nell'estrazione di schede di allenamento da file.
-Analizza il contenuto e restituisci SOLO un JSON valido (senza markdown, senza backtick) con questa struttura esatta:
-{
-  "giorni": {
-    "0": {
-      "nome": "Nome del giorno es. Push / Petto-Spalle-Tricipiti / Giorno A",
-      "esercizi": [
-        {
-          "nome": "Nome esercizio",
-          "serie": 4,
-          "ripetizioni": "8-10",
-          "recupero": "90s",
-          "note": ""
-        }
-      ]
-    },
-    "1": { "nome": "...", "esercizi": [...] },
-    "2": { "nome": "...", "esercizi": [...] },
-    "3": { "nome": "...", "esercizi": [...] },
-    "4": { "nome": "...", "esercizi": [...] },
-    "5": { "nome": "...", "esercizi": [...] },
-    "6": { "nome": "...", "esercizi": [...] }
-  }
-}
-Regole importanti:
+Analizza il contenuto e decidi:
+
+1. Se tutto è chiaro, rispondi SOLO con questo JSON:
+{"status":"complete","data":{"giorni":{"0":{"nome":"...","esercizi":[{"nome":"...","serie":4,"ripetizioni":"8-10","recupero":"90s","note":""}]},"1":{...},"2":{...},"3":{...},"4":{...},"5":{...},"6":{...}}}}
+
+2. Se hai dubbi importanti (giorni non chiari, esercizi illeggibili, struttura ambigua), rispondi SOLO con:
+{"status":"questions","questions":["Prima domanda?","Seconda domanda?"]}
+
+Regole:
 - I giorni vanno da 0 (Lunedì) a 6 (Domenica).
-- Se un giorno è di riposo, usa nome "Riposo" e esercizi array vuoto [].
-- Se la scheda ha meno di 7 giorni (es. 3 giorni), distribuiscili nei giorni tipici (es. 0=Lun, 2=Mer, 4=Ven) e metti "Riposo" per gli altri.
-- "serie" deve essere un numero intero (es. 4).
-- "ripetizioni" è una stringa (es. "8-10", "12", "30s", "1 min").
-- "recupero" è una stringa (es. "60s", "90s", "2min"). Se non specificato usa stringa vuota "".
-- "note" è una stringa con note aggiuntive (es. "usa manubri", "progressivo"). Se nessuna nota usa "".
-- Se trovi superset o circuit, aggiungi una nota esplicativa nel campo "note".
-- Mantieni i nomi degli esercizi in italiano o come scritti nella scheda originale.
-Restituisci SOLO il JSON, niente altro.`,
+- Giorni di riposo → nome "Riposo" ed esercizi [].
+- Schede con meno di 7 giorni → distribuisci nei giorni tipici e metti "Riposo" negli altri.
+- "serie" è un intero, "ripetizioni" una stringa (es. "8-10"), "recupero" una stringa (es. "90s") o "".
+- Superset/circuit → aggiungi nota nel campo "note".
+- Massimo 3 domande, solo le più critiche.
+- Restituisci SOLO il JSON, niente altro.`,
         messages
       })
     });
@@ -596,17 +580,21 @@ Restituisci SOLO il JSON, niente altro.`,
     const data = await response.json();
     const text = data.content.find(b => b.type === 'text')?.text || '';
     let parsed;
-    try {
-      parsed = JSON.parse(text.replace(/```json|```/g, '').trim());
-    } catch(e) {
-      throw new Error('Non riesco a leggere la struttura della scheda. Prova con un file più chiaro.');
-    }
+    try { parsed = JSON.parse(text.replace(/```json|```/g,'').trim()); }
+    catch(e) { throw new Error('Non riesco a leggere la struttura della scheda. Prova con un file più chiaro.'); }
 
-    importedGymData = parsed;
-    statusText.textContent = '✓ Scheda palestra letta con successo';
     document.getElementById(dropId).style.display = 'none';
-    showGymImportPreview(parsed, previewCId);
 
+    if (parsed.status === 'questions') {
+      statusText.textContent = '💬 Ho alcune domande sulla scheda…';
+      _importCache[ctx].questions = parsed.questions;
+      showImportQuestions(parsed.questions, questionsId, ctx);
+    } else {
+      const gymData = parsed.data || parsed;
+      importedGymData = gymData;
+      statusText.textContent = '✓ Scheda palestra letta con successo';
+      showGymImportPreview(gymData, previewCId);
+    }
   } catch(err) {
     statusText.textContent = '✗ ' + (err.message || 'Errore durante l\'analisi');
   }
@@ -632,9 +620,12 @@ function showGymImportPreview(data, contentId) {
 
 function cancelGymImport(ctx) {
   importedGymData = null;
+  delete _importCache[ctx];
   const isWelcome = ctx === 'gym-welcome';
-  document.getElementById(isWelcome ? 'gymWelcomeImportPreview' : 'gymImportPreview').classList.remove('show');
-  document.getElementById(isWelcome ? 'gymWelcomeImportStatus'  : 'gymImportStatus').classList.remove('show');
+  document.getElementById(isWelcome ? 'gymWelcomeImportPreview'   : 'gymImportPreview').classList.remove('show');
+  document.getElementById(isWelcome ? 'gymWelcomeImportStatus'    : 'gymImportStatus').classList.remove('show');
+  const qEl = document.getElementById(isWelcome ? 'gymWelcomeImportQuestions' : 'gymImportQuestions');
+  if (qEl) qEl.style.display = 'none';
   const fileId = isWelcome ? 'gymWelcomeImportFile' : 'gymImportFile';
   const dropId = isWelcome ? 'gymWelcomeImportDrop' : 'gymImportDrop';
   document.getElementById(fileId).value = '';
@@ -654,5 +645,100 @@ function confirmGymImport(ctx) {
     // render avverrà quando l'utente naviga sulla tab
   } else {
     renderGym();
+  }
+}
+
+// ── IMPORT Q&A FLOW ───────────────────────────────────────
+function showImportQuestions(questions, containerId, ctx) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const isGym = ctx.startsWith('gym');
+  const cancelFn = ctx === 'welcome'      ? 'cancelWelcomeImport()'
+                 : ctx === 'settings'     ? 'cancelImport()'
+                 : `cancelGymImport('${ctx}')`;
+  el.innerHTML = `
+    <div class="import-questions-title">💬 Ho alcune domande</div>
+    <div class="import-questions-sub">Rispondendo renderai la scheda più precisa e completa.</div>
+    ${questions.map((q,i) => `
+      <div class="import-question-row">
+        <div class="import-question-text">${q}</div>
+        <textarea class="import-question-input" id="iq_${ctx.replace(/-/g,'_')}_${i}" placeholder="La tua risposta…" rows="2"></textarea>
+      </div>`).join('')}
+    <div class="import-actions" style="margin-top:14px">
+      <button class="import-cancel-btn" onclick="${cancelFn}">Annulla</button>
+      <button class="import-confirm-btn" onclick="submitImportAnswers('${ctx}')">Procedi →</button>
+    </div>`;
+  el.style.display = 'block';
+}
+
+async function submitImportAnswers(ctx) {
+  const cache = _importCache[ctx];
+  if (!cache) return;
+  const isGym     = cache.isGym;
+  const isWelcome = ctx === 'welcome' || ctx === 'gym-welcome';
+  const statusId     = isGym ? (isWelcome ? 'gymWelcomeImportStatus'      : 'gymImportStatus')
+                              : (isWelcome ? 'welcomeImportStatus'         : 'importStatus');
+  const statusTextId = isGym ? (isWelcome ? 'gymWelcomeImportStatusText'  : 'gymImportStatusText')
+                              : (isWelcome ? 'welcomeImportStatusText'     : 'importStatusText');
+  const previewCId   = isGym ? (isWelcome ? 'gymWelcomeImportPreviewContent' : 'gymImportPreviewContent')
+                              : (isWelcome ? 'welcomeImportPreviewContent'    : 'importPreviewContent');
+  const questionsId  = isGym ? (isWelcome ? 'gymWelcomeImportQuestions'   : 'gymImportQuestions')
+                              : (isWelcome ? 'welcomeImportQuestions'      : 'importQuestions');
+
+  // Collect answers
+  const ctxKey = ctx.replace(/-/g,'_');
+  const questions = cache.questions || [];
+  const qaLines = questions.map((q,i) => {
+    const ans = document.getElementById(`iq_${ctxKey}_${i}`)?.value?.trim() || '(nessuna risposta)';
+    return `D: ${q}\nR: ${ans}`;
+  }).join('\n\n');
+
+  document.getElementById(questionsId).style.display = 'none';
+  document.getElementById(statusId).classList.add('show');
+  document.getElementById(statusTextId).textContent = 'Aggiorno la scheda con le tue risposte…';
+
+  try {
+    const { base64, mediaType, fileType } = cache;
+    const messages = buildImportMessages(base64, mediaType, fileType);
+    // Append Q&A to the last message
+    const last = messages[messages.length - 1];
+    const qaNote = `\n\nRisposte alle domande di chiarimento:\n${qaLines}`;
+    if (typeof last.content === 'string') {
+      messages[messages.length - 1] = { ...last, content: last.content + qaNote };
+    } else if (Array.isArray(last.content)) {
+      last.content.push({ type: 'text', text: qaNote });
+    }
+
+    const mealFinalSystem = `Sei un assistente che estrae schede alimentari. Usa il file e le risposte dell'utente per produrre la scheda completa.
+Restituisci SOLO il JSON: {"times":{"colazione":"HH:MM","pranzo":"HH:MM","spuntini":"HH:MM","cena":"HH:MM"},"days":{"0":{...},...,"6":{...}}}
+I giorni vanno da 0 (Lunedì) a 6 (Domenica). Gli alimenti devono includere quantità. Restituisci SOLO il JSON.`;
+    const gymFinalSystem = `Sei un assistente che estrae schede di allenamento. Usa il file e le risposte dell'utente per produrre la scheda completa.
+Restituisci SOLO il JSON: {"giorni":{"0":{"nome":"...","esercizi":[...]},...,"6":{...}}}
+serie=intero, ripetizioni=stringa, recupero=stringa o "". Restituisci SOLO il JSON.`;
+
+    const response = await fetch('/api/claude', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        system: isGym ? gymFinalSystem : mealFinalSystem,
+        messages
+      })
+    });
+
+    if (!response.ok) throw new Error('Errore API Claude');
+    const apiData = await response.json();
+    const text = apiData.content.find(b => b.type === 'text')?.text || '';
+    let parsed;
+    try { parsed = JSON.parse(text.replace(/```json|```/g,'').trim()); }
+    catch(e) { throw new Error('Non riesco a leggere la struttura. Prova a fornire risposte più dettagliate.'); }
+
+    document.getElementById(statusTextId).textContent = '✓ Scheda completata con successo';
+    if (isGym) { importedGymData = parsed; showGymImportPreview(parsed, previewCId); }
+    else       { importedMealData = parsed; showImportPreview(parsed, previewCId); }
+
+  } catch(err) {
+    document.getElementById(statusTextId).textContent = '✗ ' + (err.message || 'Errore durante l\'analisi');
   }
 }
