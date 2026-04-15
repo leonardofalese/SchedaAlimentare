@@ -43,7 +43,7 @@ function renderMeals() {
     return `<div class="meal-card ${done?'done':''}" onclick="toggleMeal(${currentDay},'${k}')">
       <div class="meal-header">
         <div class="meal-icon-wrap" style="color:${done?'var(--green)':'var(--text-mid)'}">${ICO[k]}</div>
-        <div class="meal-info"><div class="meal-name">${MEAL_LABELS[k]}<span style="font-size:11px;font-weight:400;color:var(--text-mid);margin-left:8px;font-family:var(--mono)">${(()=>{const kc=foods.reduce((s,f)=>s+calcKcalFromFood(f),0);return kc>0?' · '+kc+' kcal':'';})()}</span></div><div class="meal-time">${times[k]}</div></div>
+        <div class="meal-info"><div class="meal-name">${MEAL_LABELS[k]}<span style="font-size:11px;font-weight:400;color:var(--text-mid);font-family:var(--mono)">${(()=>{const kc=foods.reduce((s,f)=>s+calcKcalFromFood(f),0);return kc>0?' · '+kc+' kcal':'';})()}</span></div><div class="meal-time">${times[k]}</div></div>
         <div class="meal-check ${done?'checked':''}">${done?'<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#0a0a0a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>':''}</div>
       </div>
       <div class="meal-foods">${foods.map(f=>{const p=parseFood(f);return`<div class="food-row"><span class="food-qty">${p.qty}</span><span class="food-name">${p.name}</span></div>`;}).join('')}</div>
