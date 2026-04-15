@@ -687,8 +687,22 @@ function _schedeAutoCheck() {
 function agentFixAmbiguous() {
   const input = document.getElementById('agentAlimInput');
   if (!input) return;
-  input.value = 'Per tutti gli alimenti ambigui della scheda (pasta, riso, pollo, carne, pesce, patate ecc.) aggiungi "cotta"/"cotto" o "cruda"/"crudo" come appropriato in base al contesto — di default usa "cotta" per i carboidrati e "crudo" per le proteine.';
-  agentEditAlim();
+  const GIORNI_NAMES = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'];
+  const issues = [];
+  for (let d = 0; d < 7; d++) {
+    MEAL_KEYS.forEach(k => {
+      (state.mealData.days[d]?.[k] || []).forEach(f => {
+        if (!f || /libero/i.test(f)) return;
+        const p = parseFood(f);
+        if (_isAmbiguousFood(p.name)) issues.push(`${p.name} (${GIORNI_NAMES[d]})`);
+      });
+    });
+  }
+  // Pre-riempie l'input ma NON invia — l'utente decide cotto/crudo e manda lui
+  input.value = `Aggiungi cotto o crudo a questi alimenti: ${issues.join(', ')}`;
+  input.focus();
+  // Scorri fino all'input
+  input.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 // ── AGENT EDIT ────────────────────────────────────────────
@@ -708,7 +722,8 @@ async function agentEditAlim() {
 MAPPATURA GIORNI OBBLIGATORIA: "0"=Lunedì "1"=Martedì "2"=Mercoledì "3"=Giovedì "4"=Venerdì "5"=Sabato "6"=Domenica
 Se la modifica è piccola (max 5 alimenti, orari, quantità, 1-2 giorni), rispondi SOLO con:
 {"status":"ok","summary":"breve descrizione della modifica","data":{"times":{...},"days":{"0":{...},...,"6":{...}}}}
-Se troppo grande o riguarda tutta la settimana, rispondi SOLO con: {"status":"too_complex"}
+ECCEZIONE: le modifiche che aggiungono solo "cotto/cotta/crudo/cruda" a più alimenti su più giorni sono SEMPRE permesse — non restituire mai too_complex per questo tipo di modifica.
+Se troppo grande o riguarda tutta la settimana (salvo eccezione sopra), rispondi SOLO con: {"status":"too_complex"}
 Restituisci SOLO il JSON, niente altro.`;
 
   try {
