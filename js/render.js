@@ -216,6 +216,25 @@ function calcDayMacros(dayIndex) {
   });
   return {kcal:t.kcal, p:Math.round(t.p*10)/10, c:Math.round(t.c*10)/10, g:Math.round(t.g*10)/10};
 }
+// ── TDEE CALIBRATO SU DATI REALI ─────────────────────────
+// Richiede ≥14 voci nel weightLog e una scheda alimentare attiva.
+// Stima il TDEE reale confrontando variazione di peso con kcal medie.
+// Formula: TDEE_reale = kcal_medie + (peso_delta_giorno * 7700)
+// Se peso stabile → TDEE ≈ kcal medie; se aumenta → TDEE < kcal medie ecc.
+function calcCalibratedTDEE() {
+  const wlog = (state.weightLog || []).slice().sort((a,b) => a.date.localeCompare(b.date));
+  if (wlog.length < 7) return null; // minimo 7 misure
+  const first = wlog[0], last = wlog[wlog.length - 1];
+  const days = Math.round((new Date(last.date) - new Date(first.date)) / 86400000);
+  if (days < 7) return null;
+  const kgDelta = last.kg - first.kg;           // + = aumentato, - = calato
+  const kcalDeltaPerDay = (kgDelta * 7700) / days; // kcal/die imputabili alla variazione
+  const avgKcal = calcAvgDailyKcal();
+  if (!avgKcal) return null;
+  const tdeeReal = Math.round(avgKcal - kcalDeltaPerDay);
+  return tdeeReal > 500 ? tdeeReal : null; // sanity check
+}
+
 function calcWeekAvgMacros() {
   let count=0; const s={kcal:0,p:0,c:0,g:0};
   for(let d=0;d<7;d++){const m=calcDayMacros(d);if(m.kcal>0){s.kcal+=m.kcal;s.p+=m.p;s.c+=m.c;s.g+=m.g;count++;}}
@@ -285,15 +304,20 @@ function renderTrackerAnalytics() {
   let projHTML  = '';
 
   if (pd && (pd.peso || pd.altezza || pd.eta)) {
-    const bmr     = calcBMR(pd);
-    const tdee    = bmr ? Math.round(bmr * actMult) : 0;
+    const bmr          = calcBMR(pd);
+    const tdeeEstimated = bmr ? Math.round(bmr * actMult) : 0;
+    const tdeeCalibrated = calcCalibratedTDEE();
+    const tdee          = tdeeCalibrated || tdeeEstimated;
+    const tdeeLabel     = tdeeCalibrated
+      ? `TDEE reale <span style="font-size:9px;color:var(--green)">✓ calibrato</span>`
+      : `TDEE${hasGymData ? ` · ${actLabel} ×${actMult.toFixed(2)}` : ' kcal'}`;
     const balance = avgKcal && tdee ? avgKcal - tdee : null;
     const balClass = balance === null ? '' : balance > 0 ? ' surplus' : ' deficit';
     const balText  = balance === null ? '—' : (balance > 0 ? '+' : '') + balance;
 
     statsHTML = `<div class="analytics-stats-row">
       <div class="analytics-stat"><div class="analytics-stat-val">${bmr||'—'}</div><div class="analytics-stat-label">BMR kcal</div></div>
-      <div class="analytics-stat"><div class="analytics-stat-val">${tdee||'—'}</div><div class="analytics-stat-label">TDEE${hasGymData ? ` · ${actLabel} ×${actMult.toFixed(2)}` : ' kcal'}</div></div>
+      <div class="analytics-stat"><div class="analytics-stat-val">${tdee||'—'}</div><div class="analytics-stat-label">${tdeeLabel}</div></div>
       <div class="analytics-stat"><div class="analytics-stat-val">${avgKcal||'—'}</div><div class="analytics-stat-label">Scheda/die</div></div>
       <div class="analytics-stat${balClass}"><div class="analytics-stat-val">${balText}</div><div class="analytics-stat-label">Bilancio</div></div>
     </div>`;
