@@ -197,29 +197,43 @@
   <div class="content" id="mainContent">
 
     <div class="view active" id="view-oggi">
-      <div style="padding:16px 20px 0">
-        <div class="progress-card">
-          <div class="ring-wrap">
-            <svg width="72" height="72" viewBox="0 0 72 72">
-              <circle class="ring-bg" cx="36" cy="36" r="30"/>
-              <circle class="ring-fill" id="ringFill" cx="36" cy="36" r="30" stroke-dasharray="188.5" stroke-dashoffset="188.5"/>
-            </svg>
-            <div class="ring-label" id="ringLabel">0/4</div>
-          </div>
-          <div class="progress-info">
-            <div class="progress-title" id="progressTitle">Inizia la giornata</div>
-            <div class="progress-sub" id="kcalDisplay">0 kcal consumate</div>
-            <div class="meal-dots" id="mealDots"></div>
+      <div class="home-tabs">
+        <button class="home-tab active" id="homeTabAlim" onclick="switchHomeTab('alimenti')">Alimenti</button>
+        <button class="home-tab" id="homeTabGym" onclick="switchHomeTab('palestra')">Palestra</button>
+      </div>
+      <div id="homeAlimenti">
+        <div style="padding:16px 20px 0">
+          <div class="progress-card">
+            <div class="ring-wrap">
+              <svg width="72" height="72" viewBox="0 0 72 72">
+                <circle class="ring-bg" cx="36" cy="36" r="30"/>
+                <circle class="ring-fill" id="ringFill" cx="36" cy="36" r="30" stroke-dasharray="188.5" stroke-dashoffset="188.5"/>
+              </svg>
+              <div class="ring-label" id="ringLabel">0/4</div>
+            </div>
+            <div class="progress-info">
+              <div class="progress-title" id="progressTitle">Inizia la giornata</div>
+              <div class="progress-sub" id="kcalDisplay">0 kcal consumate</div>
+              <div class="meal-dots" id="mealDots"></div>
+            </div>
           </div>
         </div>
+        <div class="section">
+          <div class="section-label">Pasti del giorno</div>
+          <div id="mealsContainer"></div>
+        </div>
       </div>
-      <div class="section">
-        <div class="section-label">Pasti del giorno</div>
-        <div id="mealsContainer"></div>
-      </div>
-      <div class="section" id="homeGymSection" style="display:none">
-        <div class="section-label">Allenamento del giorno</div>
-        <div id="homeGymContainer"></div>
+      <div id="homePalestra" style="display:none">
+        <div style="padding:16px 20px 0">
+          <div class="gym-swatch-card">
+            <div class="gym-swatch-display" id="gymSwatchDisplay">00:00</div>
+            <div class="gym-swatch-btns">
+              <button class="gym-swatch-btn primary" id="gymSwatchBtn" onclick="gymSwatchToggle()">▶ Avvia</button>
+              <button class="gym-swatch-btn" onclick="gymSwatchReset()">↺ Reset</button>
+            </div>
+          </div>
+          <div id="homeGymContent"></div>
+        </div>
       </div>
     </div>
 
@@ -283,31 +297,6 @@
             <div id="gymEditorContainer"></div>
             <button class="save-btn" onclick="saveGymExercises()">Salva scheda palestra</button>
           </div>
-        </div>
-        <div style="height:20px"></div>
-      </div>
-    </div>
-
-    <div class="view" id="view-palestra">
-      <div class="settings-wrap">
-        <div style="font-size:22px;font-weight:800;margin-bottom:4px">Palestra</div>
-        <div style="font-size:13px;color:var(--text-mid);margin-bottom:16px">Scheda settimanale</div>
-        <div class="gym-swatch-card">
-          <div class="gym-swatch-display" id="gymSwatchDisplay">00:00</div>
-          <div class="gym-swatch-btns">
-            <button class="gym-swatch-btn primary" id="gymSwatchBtn" onclick="gymSwatchToggle()">▶ Avvia</button>
-            <button class="gym-swatch-btn" onclick="gymSwatchReset()">↺ Reset</button>
-          </div>
-        </div>
-        <div id="gymNoData" class="gym-no-data">
-          <div class="gym-no-data-icon">🏋️</div>
-          <div class="gym-no-data-text">Nessuna scheda caricata</div>
-          <div class="gym-no-data-sub">Vai in Impostazioni per importare la tua scheda palestra</div>
-        </div>
-        <div id="gymContent" style="display:none">
-          <div class="day-tabs" id="gymDayTabs"></div>
-          <div id="gymDayName"></div>
-          <div id="gymExercises"></div>
         </div>
         <div style="height:20px"></div>
       </div>
@@ -447,10 +436,6 @@
     <button class="nav-btn" onclick="switchView('scheda',this)">
       <span class="nav-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f0f0f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg></span>
       <span class="nav-lbl">Schede</span>
-    </button>
-    <button class="nav-btn" onclick="switchView('palestra',this)">
-      <span class="nav-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f0f0f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5h11M6.5 17.5h11M2 9.5h3M19 9.5h3M2 14.5h3M19 14.5h3"/><rect x="5" y="8" width="1.5" height="8" rx=".75"/><rect x="17.5" y="8" width="1.5" height="8" rx=".75"/></svg></span>
-      <span class="nav-lbl">Palestra</span>
     </button>
     <button class="nav-btn" onclick="switchView('settings',this)">
       <span class="nav-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f0f0f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>

@@ -9,7 +9,6 @@ async function initApp(user, isNewUser = false) {
   renderDayNav();
   renderMeals();
   updateProgress();
-  renderHomeGym();
   if (isNewUser) {
     // Nuovo utente: stato completamente vuoto, nessuna scheda di default
     state = {

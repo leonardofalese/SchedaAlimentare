@@ -10,4 +10,4 @@ let state = {
   schedaLoadedAt: null
 };
 let today = new Date().getDay(); today = today===0?6:today-1;
-let currentDay = today, timerInt = null, settingsDay = 0, gymDay = 0, schedeGymDay = 0, schedeActiveTab = 'alimentare';
+let currentDay = today, timerInt = null, settingsDay = 0, gymDay = 0, schedeGymDay = 0, schedeActiveTab = 'alimentare', homeActiveTab = 'alimenti';

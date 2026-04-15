@@ -9,10 +9,23 @@ function switchView(view,btn) {
   if(view==='tracker')renderTracker();
   if(view==='spesa'){renderShop();renderShopEditor();}
   if(view==='scheda'){switchSchedeTab(schedeActiveTab);}
-  if(view==='palestra')renderGym();
+  if(view==='oggi'){switchHomeTab(homeActiveTab);}
   if(view==='settings')initSettingsView();
 }
 
+
+function switchHomeTab(tab) {
+  homeActiveTab = tab;
+  const tabAlim = document.getElementById('homeTabAlim');
+  const tabGym  = document.getElementById('homeTabGym');
+  const secAlim = document.getElementById('homeAlimenti');
+  const secGym  = document.getElementById('homePalestra');
+  if (tabAlim) tabAlim.classList.toggle('active', tab === 'alimenti');
+  if (tabGym)  tabGym.classList.toggle('active',  tab === 'palestra');
+  if (secAlim) secAlim.style.display = tab === 'alimenti' ? '' : 'none';
+  if (secGym)  secGym.style.display  = tab === 'palestra' ? '' : 'none';
+  if (tab === 'palestra') renderHomePalestra();
+}
 
 function switchSchedeTab(tab) {
   schedeActiveTab = tab;
@@ -407,7 +420,7 @@ Regole:
 - Gli alimenti devono includere quantità es. "150g latte", "2 uova".
 - Giorni non specificati → "Giorno libero" per tutti i pasti.
 - Orari di default: colazione 07:30, pranzo 13:00, spuntini 16:30, cena 20:00.
-- Massimo 3 domande, solo le più critiche.
+- Massimo 6 domande, solo quelle necessarie per completare la scheda correttamente.
 - Restituisci SOLO il JSON, niente altro.`,
         messages
       })
@@ -559,18 +572,18 @@ async function processGymImportFile(file, ctx) {
 Analizza il contenuto e decidi:
 
 1. Se tutto è chiaro, rispondi SOLO con questo JSON:
-{"status":"complete","data":{"giorni":{"0":{"nome":"...","esercizi":[{"nome":"...","serie":4,"ripetizioni":"8-10","recupero":"90s","note":""}]},"1":{...},"2":{...},"3":{...},"4":{...},"5":{...},"6":{...}}}}
+{"status":"complete","data":{"giorni":{"0":{"nome":"...","esercizi":[{"nome":"...","serie":4,"ripetizioni":"8-10","kg":"60","recupero":"90s","note":""}]},"1":{...},"2":{...},"3":{...},"4":{...},"5":{...},"6":{...}}}}
 
 2. Se hai dubbi importanti (giorni non chiari, esercizi illeggibili, struttura ambigua), rispondi SOLO con:
 {"status":"questions","questions":["Prima domanda?","Seconda domanda?"]}
 
 Regole:
-- I giorni vanno da 0 (Lunedì) a 6 (Domenica).
+- MAPPATURA GIORNI OBBLIGATORIA (settimana italiana, parte da Lunedì): "0"=Lunedì "1"=Martedì "2"=Mercoledì "3"=Giovedì "4"=Venerdì "5"=Sabato "6"=Domenica. NON usare la convenzione JavaScript dove 0=Domenica.
 - Giorni di riposo → nome "Riposo" ed esercizi [].
 - Schede con meno di 7 giorni → distribuisci nei giorni tipici e metti "Riposo" negli altri.
-- "serie" è un intero, "ripetizioni" una stringa (es. "8-10"), "recupero" una stringa (es. "90s") o "".
+- "serie" è un intero, "ripetizioni" una stringa (es. "8-10"), "kg" è il peso usato (es. "60", "80", "bodyweight") o "" se non specificato, "recupero" una stringa (es. "90s") o "".
 - Superset/circuit → aggiungi nota nel campo "note".
-- Massimo 3 domande, solo le più critiche.
+- Massimo 6 domande, solo quelle necessarie per completare la scheda correttamente.
 - Restituisci SOLO il JSON, niente altro.`,
         messages
       })
@@ -641,10 +654,8 @@ function confirmGymImport(ctx) {
   save();
   cancelGymImport(ctx);
   showToast('Scheda palestra importata! ✓');
-  if (ctx === 'gym-welcome') {
-    // render avverrà quando l'utente naviga sulla tab
-  } else {
-    renderGym();
+  if (ctx !== 'gym-welcome') {
+    renderHomePalestra();
   }
 }
 
@@ -714,7 +725,8 @@ Restituisci SOLO il JSON: {"times":{"colazione":"HH:MM","pranzo":"HH:MM","spunti
 I giorni vanno da 0 (Lunedì) a 6 (Domenica). Gli alimenti devono includere quantità. Restituisci SOLO il JSON.`;
     const gymFinalSystem = `Sei un assistente che estrae schede di allenamento. Usa il file e le risposte dell'utente per produrre la scheda completa.
 Restituisci SOLO il JSON: {"giorni":{"0":{"nome":"...","esercizi":[...]},...,"6":{...}}}
-serie=intero, ripetizioni=stringa, recupero=stringa o "". Restituisci SOLO il JSON.`;
+MAPPATURA GIORNI OBBLIGATORIA (settimana italiana, parte da Lunedì): "0"=Lunedì "1"=Martedì "2"=Mercoledì "3"=Giovedì "4"=Venerdì "5"=Sabato "6"=Domenica. NON usare la convenzione JavaScript dove 0=Domenica.
+serie=intero, ripetizioni=stringa, kg=peso usato (stringa, es. "60" o "bodyweight") o "", recupero=stringa o "". Restituisci SOLO il JSON.`;
 
     const response = await fetch('/api/claude', {
       method: 'POST',

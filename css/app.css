@@ -327,6 +327,10 @@ body{font-family:var(--font);color:var(--text)}
 .import-question-input{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r-sm);padding:10px 12px;font-family:var(--font);font-size:13px;color:var(--text);outline:none;resize:vertical;min-height:48px;transition:border-color .2s}
 .import-question-input:focus{border-color:var(--green)}
 .import-question-input::placeholder{color:var(--text-soft)}
+/* HOME TABS */
+.home-tabs{display:flex;gap:0;background:var(--bg3);border-radius:var(--r-sm);padding:3px;margin:12px 20px 0}
+.home-tab{flex:1;padding:9px;border-radius:8px;border:none;background:transparent;font-family:var(--font);font-size:13px;font-weight:600;color:var(--text-mid);cursor:pointer;transition:all .2s}
+.home-tab.active{background:var(--card2);color:var(--text)}
 /* SCHEDE TABS */
 .schede-tabs{display:flex;gap:0;margin-bottom:20px;background:var(--bg3);border-radius:var(--r-sm);padding:3px}
 .schede-tab{flex:1;padding:9px;border-radius:8px;border:none;background:transparent;font-family:var(--font);font-size:13px;font-weight:600;color:var(--text-mid);cursor:pointer;transition:all .2s}
