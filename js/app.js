@@ -8,6 +8,7 @@ function switchView(view,btn) {
   if(view==='tracker')renderTracker();
   if(view==='spesa'){renderShop();renderShopEditor();}
   if(view==='scheda'){renderSettingsDayTabs();renderMealEditor();}
+  if(view==='settings')initSettingsView();
 }
 
 
@@ -160,6 +161,7 @@ async function confirmWelcomeImport() {
   if (importedMealData.times) state.mealData.times = importedMealData.times;
   const generatedShop = generateShopFromMeals(state.mealData);
   if (generatedShop.length > 0) state.shopData = generatedShop;
+  state.schedaLoadedAt = new Date().toISOString();
   importedMealData = null;
   save();
   renderMeals();
@@ -169,26 +171,66 @@ async function confirmWelcomeImport() {
   showToast('Scheda e lista spesa importate! ✓');
 }
 
-// ── PROFILE MODAL ─────────────────────────────────────────
-function openProfileModal() {
-  const nickname = currentUser?.user_metadata?.nickname || '';
-  document.getElementById('profileNickname').value = nickname;
-  document.getElementById('profileNewPassword').value = '';
-  document.getElementById('profileConfirmPassword').value = '';
-  document.getElementById('nicknameSuccess').classList.remove('show');
-  document.getElementById('passwordError').classList.remove('show');
-  document.getElementById('passwordSuccess').classList.remove('show');
-  document.getElementById('profileModal').classList.remove('hidden');
-}
+// ── GREETING MODAL (icona profilo) ────────────────────────
+function openProfileModal() { openGreeting(); }
 
-function closeProfileModal(e) {
-  if (e.target === document.getElementById('profileModal')) {
-    document.getElementById('profileModal').classList.add('hidden');
+function openGreeting() {
+  const nickname = currentUser?.user_metadata?.nickname || 'Leo';
+  document.getElementById('greetingName').textContent = nickname;
+
+  const now = new Date();
+  const giorni = ['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
+  const mesi = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+  document.getElementById('greetingDay').textContent = `Oggi è ${giorni[now.getDay()]} ${now.getDate()} ${mesi[now.getMonth()]}`;
+
+  const mealOrder = ['colazione','pranzo','spuntini','cena'];
+  const labels = {colazione:'Colazione',pranzo:'Pranzo',spuntini:'Spuntino',cena:'Cena'};
+  const times = state.mealData.times;
+  let nextMeal = null;
+  for (const k of mealOrder) {
+    if (!isDone(today, k)) { nextMeal = { label: labels[k], time: times[k] || '' }; break; }
   }
+  const nextEl = document.getElementById('greetingNext');
+  if (nextMeal) {
+    nextEl.innerHTML = `Il prossimo pasto è <em>${nextMeal.label}</em> alle ${nextMeal.time}`;
+  } else {
+    nextEl.textContent = 'Tutti i pasti di oggi completati! 🎉';
+  }
+
+  const schedaEl = document.getElementById('greetingScheda');
+  if (state.schedaLoadedAt) {
+    const d = new Date(state.schedaLoadedAt);
+    schedaEl.textContent = 'Scheda caricata il ' + d.toLocaleDateString('it-IT', {day:'numeric', month:'long', year:'numeric'});
+  } else {
+    schedaEl.textContent = 'Nessuna scheda caricata';
+  }
+
+  document.getElementById('greetingModal').classList.remove('hidden');
 }
 
-async function saveNickname() {
-  const nickname = document.getElementById('profileNickname').value.trim();
+function closeGreeting() {
+  document.getElementById('greetingModal').classList.add('hidden');
+}
+
+function closeGreetingBg(e) {
+  if (e.target === document.getElementById('greetingModal')) closeGreeting();
+}
+
+// ── SETTINGS VIEW ─────────────────────────────────────────
+function initSettingsView() {
+  const nickname = currentUser?.user_metadata?.nickname || '';
+  const email = currentUser?.email || '—';
+  document.getElementById('settingsNickname').value = nickname;
+  document.getElementById('settingsEmail').textContent = email;
+  document.getElementById('settingsNewPassword').value = '';
+  document.getElementById('settingsConfirmPassword').value = '';
+  document.getElementById('settingsNicknameSuccess').classList.remove('show');
+  document.getElementById('settingsPasswordError').classList.remove('show');
+  document.getElementById('settingsPasswordSuccess').classList.remove('show');
+}
+
+async function saveSettingsNickname() {
+  const nickname = document.getElementById('settingsNickname').value.trim();
   if (!nickname) return;
   const clean = nickname.charAt(0).toUpperCase() + nickname.slice(1).toLowerCase();
   const { data, error } = await sb.auth.updateUser({ data: { nickname: clean } });
@@ -196,26 +238,26 @@ async function saveNickname() {
     currentUser = data.user;
     document.getElementById('appNickname').textContent = clean;
     document.getElementById('profileInitials').textContent = clean.charAt(0).toUpperCase();
-    document.getElementById('nicknameSuccess').classList.add('show');
-    setTimeout(() => document.getElementById('nicknameSuccess').classList.remove('show'), 2000);
+    document.getElementById('settingsNicknameSuccess').classList.add('show');
+    setTimeout(() => document.getElementById('settingsNicknameSuccess').classList.remove('show'), 2000);
   }
 }
 
-async function savePassword() {
-  const newPwd = document.getElementById('profileNewPassword').value;
-  const confirmPwd = document.getElementById('profileConfirmPassword').value;
-  const errEl = document.getElementById('passwordError');
-  const okEl = document.getElementById('passwordSuccess');
+async function saveSettingsPassword() {
+  const newPwd = document.getElementById('settingsNewPassword').value;
+  const confirmPwd = document.getElementById('settingsConfirmPassword').value;
+  const errEl = document.getElementById('settingsPasswordError');
+  const okEl = document.getElementById('settingsPasswordSuccess');
   errEl.classList.remove('show');
   okEl.classList.remove('show');
-  if (newPwd.length < 6) { errEl.textContent = 'La password deve essere di almeno 6 caratteri'; errEl.classList.add('show'); return; }
+  if (newPwd.length < 6) { errEl.textContent = 'Min. 6 caratteri'; errEl.classList.add('show'); return; }
   if (newPwd !== confirmPwd) { errEl.textContent = 'Le password non coincidono'; errEl.classList.add('show'); return; }
   const { error } = await sb.auth.updateUser({ password: newPwd });
   if (error) { errEl.textContent = error.message; errEl.classList.add('show'); }
   else {
     okEl.classList.add('show');
-    document.getElementById('profileNewPassword').value = '';
-    document.getElementById('profileConfirmPassword').value = '';
+    document.getElementById('settingsNewPassword').value = '';
+    document.getElementById('settingsConfirmPassword').value = '';
     setTimeout(() => okEl.classList.remove('show'), 2000);
   }
 }
@@ -378,6 +420,7 @@ function confirmImport() {
   if (importedMealData.times) state.mealData.times = importedMealData.times;
   const generatedShop = generateShopFromMeals(state.mealData);
   if (generatedShop.length > 0) state.shopData = generatedShop;
+  state.schedaLoadedAt = new Date().toISOString();
   save(); renderMeals(); updateProgress(); renderMealEditor(); cancelImport();
   showToast('Scheda e lista spesa aggiornate! ✓');
 }

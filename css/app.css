@@ -141,6 +141,9 @@ body{font-family:var(--font);color:var(--text)}
 .settings-wrap{padding:20px}
 .settings-section{margin-bottom:28px}
 .settings-section-title{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-soft);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.settings-info-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)}
+.settings-info-label{font-size:13px;color:var(--text-mid)}
+.settings-info-value{font-size:13px;color:var(--text);font-family:var(--mono)}
 .settings-row{background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 16px;margin-bottom:8px}
 .settings-row-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .settings-row-name{font-size:14px;font-weight:700}
@@ -195,11 +198,22 @@ body{font-family:var(--font);color:var(--text)}
 .welcome-title em{color:var(--green);font-style:normal}
 .welcome-sub{font-size:13px;color:var(--text-mid);margin-bottom:28px}
 .welcome-skip{background:transparent;border:none;font-family:var(--font);font-size:13px;color:var(--text-soft);cursor:pointer;text-decoration:underline;margin-top:12px;display:block;width:100%;text-align:center}
-/* PROFILE MODAL */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;display:flex;align-items:flex-end;justify-content:center}
-.modal-overlay.hidden{display:none}
-.modal-sheet{background:var(--card);border-radius:var(--r) var(--r) 0 0;padding:24px;width:100%;max-width:480px;border-top:1px solid var(--border2);max-height:85vh;overflow-y:auto}
-.modal-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 20px}
+/* GREETING MODAL */
+.greeting-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px}
+.greeting-overlay.hidden{display:none}
+.greeting-card{background:var(--card);border-radius:var(--r);padding:28px 24px 24px;width:100%;max-width:340px;position:relative;border:1px solid var(--border2)}
+.greeting-close{position:absolute;top:12px;right:12px;background:none;border:none;cursor:pointer;color:var(--text-soft);padding:4px;display:flex;align-items:center;justify-content:center;border-radius:50%;width:28px;height:28px;transition:background .15s}
+.greeting-close:hover,.greeting-close:active{background:var(--bg3)}
+.greeting-hi{font-size:26px;font-weight:800;margin-bottom:10px;line-height:1.2;padding-right:24px}
+.greeting-hi em{color:var(--green);font-style:normal}
+.greeting-day{font-size:13px;color:var(--text-mid);margin-bottom:6px}
+.greeting-next{font-size:14px;color:var(--text);font-weight:500}
+.greeting-next em{color:var(--green);font-style:normal;font-weight:700}
+.greeting-divider{height:1px;background:var(--border);margin:18px 0}
+.greeting-scheda{font-size:12px;color:var(--text-soft)}
+/* SHARED MODAL COMPONENTS */
+.modal-field{margin-bottom:14px}
+.modal-field label{display:block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-soft);margin-bottom:6px}
 .modal-title{font-size:18px;font-weight:800;margin-bottom:20px}
 .modal-field{margin-bottom:14px}
 .modal-field label{display:block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-soft);margin-bottom:6px}

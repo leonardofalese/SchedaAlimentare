@@ -5,7 +5,7 @@ function showAllHidden() {
   document.getElementById('mainApp').classList.remove('visible');
   document.getElementById('welcomeScreen').classList.add('hidden');
   document.getElementById('resetScreen').classList.add('hidden');
-  document.getElementById('profileModal').classList.add('hidden');
+  document.getElementById('greetingModal').classList.add('hidden');
 }
 function showAuth() {
   showAllHidden();

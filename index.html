@@ -118,31 +118,17 @@
   </div>
 </div>
 
-<!-- PROFILE MODAL -->
-<div class="modal-overlay hidden" id="profileModal" onclick="closeProfileModal(event)">
-  <div class="modal-sheet">
-    <div class="modal-handle"></div>
-    <div class="modal-title">Il tuo profilo</div>
-    <div class="modal-field">
-      <label>Nickname</label>
-      <input class="modal-input" type="text" id="profileNickname" placeholder="Il tuo nickname" maxlength="20">
-    </div>
-    <button class="modal-btn" onclick="saveNickname()">Salva nickname</button>
-    <div class="modal-success" id="nicknameSuccess">Nickname aggiornato!</div>
-    <div class="modal-divider"></div>
-    <div class="modal-field">
-      <label>Nuova password</label>
-      <input class="modal-input" type="password" id="profileNewPassword" placeholder="Minimo 6 caratteri">
-    </div>
-    <div class="modal-field">
-      <label>Conferma password</label>
-      <input class="modal-input" type="password" id="profileConfirmPassword" placeholder="Ripeti la password">
-    </div>
-    <button class="modal-btn" onclick="savePassword()">Cambia password</button>
-    <div class="modal-error" id="passwordError"></div>
-    <div class="modal-success" id="passwordSuccess">Password aggiornata!</div>
-    <div class="modal-divider"></div>
-    <button class="modal-btn-ghost" onclick="doLogout()">Esci dall'account</button>
+<!-- GREETING MODAL -->
+<div class="greeting-overlay hidden" id="greetingModal" onclick="closeGreetingBg(event)">
+  <div class="greeting-card">
+    <button class="greeting-close" onclick="closeGreeting()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div class="greeting-hi">Ciao <em id="greetingName">Leo</em>!</div>
+    <div class="greeting-day" id="greetingDay">Oggi è —</div>
+    <div class="greeting-next" id="greetingNext">—</div>
+    <div class="greeting-divider"></div>
+    <div class="greeting-scheda" id="greetingScheda">—</div>
   </div>
 </div>
 
@@ -234,7 +220,38 @@
     <div class="view" id="view-settings">
       <div class="settings-wrap">
         <div style="font-size:22px;font-weight:800;margin-bottom:4px">Impostazioni</div>
-        <div style="font-size:13px;color:var(--text-mid);margin-bottom:20px">Sovrascrivi la scheda da file</div>
+        <div style="font-size:13px;color:var(--text-mid);margin-bottom:20px">Profilo e configurazione</div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">Nickname</div>
+          <div class="modal-field" style="margin-bottom:10px">
+            <input class="modal-input" type="text" id="settingsNickname" placeholder="Il tuo nickname" maxlength="20">
+          </div>
+          <button class="modal-btn" onclick="saveSettingsNickname()">Salva nickname</button>
+          <div class="modal-success" id="settingsNicknameSuccess">Nickname aggiornato!</div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">Dati profilo</div>
+          <div class="settings-info-row">
+            <span class="settings-info-label">Email</span>
+            <span class="settings-info-value" id="settingsEmail">—</span>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">Modifica password</div>
+          <div class="modal-field" style="margin-bottom:10px">
+            <input class="modal-input" type="password" id="settingsNewPassword" placeholder="Nuova password (min. 6 caratteri)">
+          </div>
+          <div class="modal-field" style="margin-bottom:10px">
+            <input class="modal-input" type="password" id="settingsConfirmPassword" placeholder="Conferma password">
+          </div>
+          <button class="modal-btn" onclick="saveSettingsPassword()">Cambia password</button>
+          <div class="modal-error" id="settingsPasswordError"></div>
+          <div class="modal-success" id="settingsPasswordSuccess">Password aggiornata!</div>
+        </div>
+
         <div class="settings-section">
           <div class="settings-section-title">Sovrascrivi scheda da file</div>
           <div style="font-size:12px;color:var(--text-mid);margin-bottom:12px">Carica un nuovo file per sovrascrivere tutti i pasti della settimana. L'operazione sostituirà la scheda attuale.</div>
@@ -255,6 +272,11 @@
               <button class="import-confirm-btn" onclick="confirmImport()">✓ Importa</button>
             </div>
           </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">Account</div>
+          <button class="modal-btn" onclick="doLogout()">Esci dall'account</button>
         </div>
         <div style="height:20px"></div>
       </div>
